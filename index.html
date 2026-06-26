@@ -61,6 +61,7 @@ section{position:relative;}
   box-shadow:0 1px 0 var(--line-soft);
 }
 .nav-logo{display:flex;align-items:center;gap:10px;}
+.nav-logo img{width:30px;height:30px;object-fit:contain;}
 .nav-logo span{font-family:var(--serif);font-size:19px;color:var(--cream);font-weight:600;letter-spacing:.01em;transition:color .35s;}
 .nav.scrolled .nav-logo span{color:var(--ink);}
 .nav-links{display:flex;gap:34px;align-items:center;}
@@ -411,7 +412,7 @@ footer{background:#0D1813;padding:60px 32px 32px;}
 <!-- NAV -->
 <nav class="nav" id="nav">
   <div class="nav-logo" onclick="window.location.href='index.html'" style="cursor:pointer;">
-    <svg width="30" height="30" viewBox="0 0 480 480"><defs><linearGradient id="nl" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#7FA08E"/><stop offset="100%" stop-color="#9183A8"/></linearGradient></defs><circle cx="240" cy="240" r="228" fill="#16271F"/><path d="M240 310 C226 288,218 255,222 210 C226 168,234 128,240 100 C246 128,254 168,258 210 C262 255,254 288,240 310Z" fill="url(#nl)"/></svg>
+    <img src="logo.jpeg" alt="Where's My Therapist logo" width="30" height="30">
     <span style="font-size:16px;white-space:nowrap">Where's My <em style="font-style:italic;color:#7FA08E">Therapist</em></span>
   </div>
   <div class="nav-links">
@@ -707,22 +708,6 @@ footer{background:#0D1813;padding:60px 32px 32px;}
       </div>
       <button class="pc-btn" onclick="window.location.href='contact.html'">Choose Growth</button>
     </div>
-
-    <div class="price-card">
-      <div class="pc-name">Complete</div>
-      <div class="pc-desc">For ongoing psychiatric care</div>
-      <div class="pc-price"><span class="amt price-m" data-m="1999" data-y="17999">₹1,999</span><span class="per">/mo</span></div>
-      <div class="pc-yearly-note billing-note">&nbsp;</div>
-      <div class="pc-feats">
-        <div><span class="ck">✓</span> Everything in Growth</div>
-        <div><span class="ck">✓</span> 2 sessions/mo — therapist or psychiatrist</div>
-        <div><span class="ck">✓</span> Add a family member at 50% off</div>
-        <div><span class="ck">✓</span> Dedicated care coordinator</div>
-      </div>
-      <button class="pc-btn" onclick="window.location.href='contact.html'">Choose Complete</button>
-    </div>
-
-  </div>
 
   <p class="pay-per-session reveal">Prefer to pay per visit? <strong>No subscription required</strong> — book any session à la carte from ₹500 to ₹10,000 depending on provider.</p>
 </section>
