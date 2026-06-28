@@ -6,8 +6,8 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 $host = "localhost";
 $dbname = "wheresmy_Therapist";
-$username = "wheresmy_user";
-$password = "your_password_here";
+$username = "wheresmy_manager";
+$password = "Pushu@18#";
 
 try {
   $conn = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
