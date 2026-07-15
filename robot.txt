@@ -1,6 +1,10 @@
 User-agent: *
 Allow: /
-Allow: /favicon.png
+Allow: /favicon.ico
+
+User-agent: Googlebot-Image
+Allow: /favicon.ico
+
 
 Sitemap: https://www.wheresmytherapist.com/sitemap.xml
 
