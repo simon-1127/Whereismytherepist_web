@@ -73,7 +73,39 @@ section{position:relative;}
   padding:15px 24px;border-radius:100px;border:1px solid rgba(250,246,239,.28);cursor:pointer;
   transition:border-color .25s, background .25s;
 }
-.btn-ghost:hover{border-color:rgba(250,246,239,.6);background:rgba(255,255,255,.04);}
+.btn-ghost:hover{border-color:rgba(250,246,239,.6);background:rgba(255,255,255,.04);} 
+
+/* ---------- SOCIAL LINKS ---------- */
+.social-links-title{font-weight:600;color:var(--ink);margin-bottom:12px;}
+.social-links{display:flex;flex-wrap:wrap;gap:12px;}
+.social-link{
+  width:44px;height:44px;border:1.5px solid transparent;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:transform .25s ease, box-shadow .25s ease, filter .25s ease;
+  box-shadow:0 8px 20px rgba(17,32,26,.06);
+}
+.social-link:hover{
+  transform:translateY(-2px);filter:brightness(1.04);
+  box-shadow:0 12px 24px rgba(17,32,26,.14);
+}
+.social-link svg{
+  width:20px;height:20px;fill:#fff;transition:transform .25s ease;
+}
+.social-link:hover svg{transform:scale(1.06);}
+.social-link.instagram{
+  background:linear-gradient(45deg,#f58529 0%,#dd2a7b 50%,#8134af 100%);
+}
+.social-link.facebook{
+  background:#1877f2;
+}
+.social-link.linkedin{
+  background:#0a66c2;
+}
+
+@media(max-width:560px){
+  .social-links a{width:42px;height:42px;}
+  .social-links{gap:10px;}
+}
 
 /* ---------- FOOTER ---------- */
 footer{background:#0D1813;padding:60px 32px 32px;}
