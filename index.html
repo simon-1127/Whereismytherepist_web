@@ -427,8 +427,29 @@ footer{background:#0D1813;padding:60px 32px 32px;}
     <a href="contact.html">Contact</a>
     <a href="about.html">About</a>
   </div>
-  <button class="nav-cta" onclick="document.getElementById('notify').scrollIntoView({behavior:'smooth'})">Notify me</button>
+  <div class="nav-actions">
+    <button class="nav-cta" onclick="document.getElementById('notify').scrollIntoView({behavior:'smooth'})">Notify me</button>
+    <button class="nav-menu-btn" type="button" aria-label="Open menu" onclick="toggleSideMenu()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 </nav>
+<div class="side-menu-backdrop" onclick="toggleSideMenu(false)"></div>
+<aside class="side-menu" aria-label="Site menu">
+  <div class="side-menu-header">
+    <div class="side-menu-logo">Where's My <em style="font-style:italic;color:#7FA08E">Therapist</em></div>
+    <button class="side-menu-close" type="button" aria-label="Close menu" onclick="toggleSideMenu(false)">×</button>
+  </div>
+  <div class="side-menu-links">
+    <a href="#hero" class="active">Home</a>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#compare">Compare</a>
+    <a href="contact.html">Contact</a>
+    <a href="about.html">About</a>
+  </div>
+  <div class="side-menu-footer">Accessible, mobile-friendly pages for every visitor.</div>
+</aside>
 
 <!-- HERO -->
 <section class="hero" id="hero">
@@ -832,6 +853,15 @@ footer{background:#0D1813;padding:60px 32px 32px;}
 const nav = document.getElementById('nav');
 window.addEventListener('scroll', () => {
   nav.classList.toggle('scrolled', window.scrollY > 40);
+});
+
+function toggleSideMenu(force) {
+  const shouldOpen = typeof force === 'boolean' ? force : !document.body.classList.contains('menu-open');
+  document.body.classList.toggle('menu-open', shouldOpen);
+}
+
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') toggleSideMenu(false);
 });
 
 // ---- reveal on scroll ----
