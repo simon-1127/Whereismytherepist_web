@@ -1,7 +1,8 @@
 import { createClient } from "../../../lib/supabase/server";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Navbar from "../../../components/Navbar";
+import BookingWidget from "../../../components/BookingWidget";
 
 // Ensure fresh data is fetched
 export const revalidate = 0;
@@ -13,12 +14,47 @@ export default async function TherapistProfile({ params }: { params: Promise<{ i
   // 2. Initialize the server-side Supabase client (Passes your login cookies!)
   const supabase = await createClient();
 
-  // 3. Fetch specific therapist profile using the ID from the URL
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: userRow } = await supabase.from("users").select("role").eq("id", user.id).single();
+    if (userRow?.role === "provider") {
+      redirect("/provider/dashboard");
+    }
+  }
+
+  // 3. Fetch specific therapist profile using the ID from the URL, including
+  // the joined lookup tables (languages, specialties, therapeutic approaches)
+  // that the list/detail pages weren't surfacing before.
   const { data: therapist, error } = await supabase
     .from('provider_profiles')
-    .select('*')
+    .select(`
+      *,
+      provider_languages ( languages ( id, name ) ),
+      provider_specialties ( specialties ( id, name ) ),
+      provider_approaches ( therapeutic_approaches ( id, name ) )
+    `)
     .eq('user_id', resolvedParams.id)
-    .single(); 
+    .single();
+
+  const languages = (therapist?.provider_languages || [])
+    .map((row: any) => row.languages)
+    .filter(Boolean);
+  const specialties = (therapist?.provider_specialties || [])
+    .map((row: any) => row.specialties)
+    .filter(Boolean);
+  const approaches = (therapist?.provider_approaches || [])
+    .map((row: any) => row.therapeutic_approaches)
+    .filter(Boolean);
+
+  const ageGroupLabels: Record<string, string> = {
+    children: 'Children',
+    teens: 'Teens',
+    adults: 'Adults',
+    all_ages: 'All Ages',
+  };
 
   // If the ID is invalid, or the DB blocks the request, show a 404 page
   if (error || !therapist) {
@@ -79,23 +115,32 @@ export default async function TherapistProfile({ params }: { params: Promise<{ i
                   <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                   Online Sessions
                 </span>
+                {therapist.age_groups_served && therapist.age_groups_served.length > 0 && (
+                  <span className="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-lg text-xs">
+                    <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"></path></svg>
+                    Works with {therapist.age_groups_served.map((g: string) => ageGroupLabels[g] || g).join(', ')}
+                  </span>
+                )}
               </div>
+
+              {specialties.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-5">
+                  {specialties.map((s: any) => (
+                    <span key={s.id} className="bg-indigo-50 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-indigo-100">
+                      {s.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             
             {/* Booking Card Area */}
-            <div className="w-full md:w-[320px] shrink-0 border border-slate-200 rounded-3xl p-6 bg-slate-50/50 flex flex-col h-fit">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-[#1E1B4B]">Book a Session</h3>
-              </div>
-              <button className="w-full bg-gradient-to-r from-blue-700 to-pink-500 text-white py-3.5 rounded-xl font-bold mb-3 hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                 Book a Session
-              </button>
-              <button className="w-full bg-white border border-blue-700 text-blue-700 py-3.5 rounded-xl font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                 Chat with Therapist
-              </button>
-            </div>
+            <BookingWidget
+              providerId={therapist.user_id}
+              providerName={therapist.full_name || "this therapist"}
+              sessionRate={therapist.base_session_rate || 0}
+              currency={therapist.currency || "INR"}
+            />
           </div>
 
           {/* BOTTOM GRIDS */}
@@ -114,10 +159,31 @@ export default async function TherapistProfile({ params }: { params: Promise<{ i
                 <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
                 Approach
               </h3>
-              <p className="text-sm text-slate-600 leading-relaxed mb-8 whitespace-pre-wrap">
+              <p className="text-sm text-slate-600 leading-relaxed mb-2 whitespace-pre-wrap">
                 {therapist.approach_statement || "Not specified."} 
               </p>
-              
+              {approaches.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-8">
+                  {approaches.map((a: any) => (
+                    <span key={a.id} className="bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-100">
+                      {a.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {therapist.video_intro_url && (
+                <>
+                  <h3 className="text-lg font-bold text-[#1E1B4B] flex items-center gap-2 mb-4 pt-6 border-t border-slate-100">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    Video Introduction
+                  </h3>
+                  <video controls className="w-full rounded-2xl mb-8 bg-black max-h-[400px]">
+                    <source src={therapist.video_intro_url} />
+                  </video>
+                </>
+              )}
+
               {therapist.education_credentials && therapist.education_credentials.length > 0 && (
                   <>
                   <h3 className="text-lg font-bold text-[#1E1B4B] flex items-center gap-2 mb-4 pt-6 border-t border-slate-100">
@@ -134,16 +200,34 @@ export default async function TherapistProfile({ params }: { params: Promise<{ i
             </div>
 
             {/* SIDEBAR FOR EXTRA INFO */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 h-fit">
-               <h3 className="text-lg font-bold text-[#1E1B4B] flex items-center gap-2 mb-4">
-                 <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                 Safety & Security
-               </h3>
-               <div className="space-y-4 text-sm text-slate-600">
+            <div className="space-y-6">
+              {languages.length > 0 && (
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                  <h3 className="text-lg font-bold text-[#1E1B4B] flex items-center gap-2 mb-4">
+                    <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.5 7a15.975 15.975 0 01-6.5 6.5" /></svg>
+                    Languages Spoken
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {languages.map((l: any) => (
+                      <span key={l.id} className="bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+                        {l.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                <h3 className="text-lg font-bold text-[#1E1B4B] flex items-center gap-2 mb-4">
+                  <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                  Safety & Security
+                </h3>
+                <div className="space-y-4 text-sm text-slate-600">
                   <p className="flex items-center gap-3"><svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg> Identity Verified</p>
                   <p className="flex items-center gap-3"><svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg> Credentials Checked</p>
                   <p className="flex items-center gap-3"><svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg> Secure Video Calling</p>
-               </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
