@@ -55,7 +55,9 @@ export async function POST(request: Request) {
     };
 
     const order = await createRazorpayOrder({
-      amountInPaise: result.amount * 100,
+      // result.amount is already in paise (matches provider_profiles.base_session_rate),
+      // which is also the unit Razorpay's API expects — no conversion needed here.
+      amountInPaise: result.amount,
       currency: result.currency,
       receipt: result.session_id,
       notes: {

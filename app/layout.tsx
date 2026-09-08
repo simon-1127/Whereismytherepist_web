@@ -1,8 +1,12 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "1-on-1 Video App",
-  description: "Built with Supabase and Daily.co",
+  title: "WheresMyTherapist",
+  description: "Find the right therapist for where you are in life.",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

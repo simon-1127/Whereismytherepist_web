@@ -4,6 +4,7 @@ import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import FilterSidebar from "../../components/FilterSidebar";
 import SortDropdown from "../../components/SortDropdown";
+import { formatMoney, rupeesToPaise } from "../../lib/money";
 
 type SearchParams = {
   minPrice?: string;
@@ -72,8 +73,10 @@ export default async function FindTherapist({ searchParams }: { searchParams: Pr
     );
     // .eq('is_publicly_listed', true); // uncomment when ready for production
 
-  if (params?.maxPrice) query = query.lte("base_session_rate", parseInt(params.maxPrice));
-  if (params?.minPrice) query = query.gte("base_session_rate", parseInt(params.minPrice));
+  // The price slider UI works in whole rupees, but base_session_rate is
+  // stored in paise — convert at this boundary before querying.
+  if (params?.maxPrice) query = query.lte("base_session_rate", rupeesToPaise(params.maxPrice));
+  if (params?.minPrice) query = query.gte("base_session_rate", rupeesToPaise(params.minPrice));
   if (providerIdFilter) query = query.in("user_id", providerIdFilter);
 
   switch (params?.sort) {
@@ -140,7 +143,7 @@ export default async function FindTherapist({ searchParams }: { searchParams: Pr
                           <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
                           {therapist.rating_avg || 'New'} <span className="text-xs text-slate-400 font-normal">({therapist.rating_count || 0})</span>
                         </p>
-                        <p className="font-bold text-pink-600 mt-1">₹{therapist.base_session_rate || 0} <span className="text-xs text-slate-500 font-normal">/ session</span></p>
+                        <p className="font-bold text-pink-600 mt-1">{formatMoney(therapist.base_session_rate, therapist.currency)} <span className="text-xs text-slate-500 font-normal">/ session</span></p>
                       </div>
                     </div>
 

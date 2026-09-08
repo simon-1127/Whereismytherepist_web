@@ -2,6 +2,7 @@ import { createClient } from "../../../lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Navbar from "../../../components/Navbar";
+import { formatMoney } from "../../../lib/money";
 
 export const revalidate = 0;
 
@@ -79,8 +80,7 @@ export default async function ProviderBookingsPage() {
                       {s.status.replace(/_/g, " ")}
                     </span>
                     <span className="text-xs text-slate-500">
-                      Payout: {s.currency === "INR" ? "₹" : ""}
-                      {s.provider_payout_amount}
+                      Payout: {formatMoney(s.provider_payout_amount, s.currency)}
                     </span>
                   </div>
                 </div>

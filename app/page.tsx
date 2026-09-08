@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 import { createClient } from "../lib/supabase/server";
+import { formatMoney } from "../lib/money";
+import TrustFooterBar from "../components/TrustFooterBar";
 
 export const revalidate = 0;
 
@@ -33,7 +35,7 @@ export default async function Home() {
         initials: t.full_name ? t.full_name.substring(0, 2).toUpperCase() : "??",
         name: t.full_name || "Unknown",
         title: t.professional_title || "Therapist",
-        rate: `${t.currency === 'INR' ? '₹' : ''}${t.base_session_rate || 0}`
+        rate: formatMoney(t.base_session_rate, t.currency)
       }));
     }
   }
@@ -128,6 +130,8 @@ export default async function Home() {
           </div>
         )}
       </section>
+
+      <TrustFooterBar />
 
     </div>
   );

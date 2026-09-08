@@ -2,6 +2,7 @@ import { createClient } from "../../../lib/supabase/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Navbar from "../../../components/Navbar";
+import { formatMoney } from "../../../lib/money";
 
 export const revalidate = 0;
 
@@ -138,8 +139,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
             <div className="bg-slate-50 rounded-xl p-4">
               <p className="text-slate-500 mb-1">Amount</p>
               <p className="font-semibold text-[#1E1B4B]">
-                {session.currency === "INR" ? "₹" : ""}
-                {session.amount}
+                {formatMoney(session.amount, session.currency)}
               </p>
             </div>
           </div>

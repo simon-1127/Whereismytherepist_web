@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 import { AGE_GROUPS } from "../../lib/constants";
+import { paiseToRupees, rupeesToPaise } from "../../lib/money";
 
 type LookupItem = { id: string; name: string };
 
@@ -92,7 +93,7 @@ export default function ProviderProfileForm({
     existingProfile?.years_experience?.toString() || ""
   );
   const [sessionRate, setSessionRate] = useState(
-    existingProfile?.base_session_rate?.toString() || ""
+    existingProfile?.base_session_rate ? paiseToRupees(existingProfile.base_session_rate).toString() : ""
   );
   const [licenseNo, setLicenseNo] = useState(existingProfile?.license_no || "");
   const [educationCredentials, setEducationCredentials] = useState(
@@ -203,7 +204,7 @@ export default function ProviderProfileForm({
         full_name: fullName.trim(),
         professional_title: title.trim(),
         years_experience: parseInt(yearsExperience, 10),
-        base_session_rate: parseInt(sessionRate, 10),
+        base_session_rate: rupeesToPaise(sessionRate),
         license_no: licenseNo.trim() || null,
         education_credentials: educationArray,
         age_groups_served: Array.from(selectedAgeGroups),
@@ -272,7 +273,7 @@ export default function ProviderProfileForm({
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Session Rate (₹)</label>
+              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Session Rate (₹ per session)</label>
               <input type="number" min={1} value={sessionRate} onChange={(e) => setSessionRate(e.target.value)} required
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
