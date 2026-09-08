@@ -1,7 +1,6 @@
 import { createClient } from "../../../lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Navbar from "../../../components/Navbar";
 
 export const revalidate = 0;
 
@@ -50,8 +49,7 @@ export default async function ProviderDashboardPage() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-[#FDF6F0] font-sans text-slate-800 flex flex-col">
-        <Navbar />
+      <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
         <div className="max-w-lg mx-auto text-center py-24 px-6">
           <p className="text-slate-700 font-semibold text-lg mb-2">Welcome — let's set up your profile</p>
           <p className="text-slate-500 text-sm mb-6">
@@ -69,8 +67,7 @@ export default async function ProviderDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDF6F0] font-sans text-slate-800 flex flex-col">
-      <Navbar />
+    <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
       <div className="max-w-4xl mx-auto px-5 md:px-8 py-10 w-full flex-grow">
         <h1 className="text-2xl font-extrabold text-[#1E1B4B] mb-1">Welcome back, {profile.full_name}</h1>
         <p className="text-sm text-slate-500 mb-8">Here's what's happening with your practice.</p>
@@ -115,9 +112,13 @@ export default async function ProviderDashboardPage() {
           </Link>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <Link href="/provider/bookings" className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md transition-shadow flex items-center justify-between">
             <span className="font-semibold text-[#1E1B4B]">View all bookings</span>
+            <span>→</span>
+          </Link>
+          <Link href="/provider/availability" className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md transition-shadow flex items-center justify-between">
+            <span className="font-semibold text-[#1E1B4B]">Manage availability</span>
             <span>→</span>
           </Link>
           <Link href="/provider/profile" className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md transition-shadow flex items-center justify-between">

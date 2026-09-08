@@ -1,7 +1,6 @@
 import { createClient } from "../../lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Navbar from "../../components/Navbar";
 
 export const revalidate = 0;
 
@@ -22,7 +21,6 @@ export default async function MyBookingsPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
-        <Navbar />
         <div className="max-w-lg mx-auto text-center py-24">
           <p className="text-slate-600 mb-4">Please sign in to view your bookings.</p>
           <Link href="/login" className="text-blue-700 font-semibold">Sign in →</Link>
@@ -46,7 +44,6 @@ export default async function MyBookingsPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 flex flex-col">
-      <Navbar />
       <div className="max-w-3xl mx-auto px-5 md:px-8 py-10 w-full flex-grow">
         <h1 className="text-3xl font-extrabold text-[#1E1B4B] mb-8">My Bookings</h1>
 

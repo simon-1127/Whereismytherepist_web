@@ -1,7 +1,6 @@
 import { createClient } from "../../../lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Navbar from "../../../components/Navbar";
 
 export const revalidate = 0;
 
@@ -26,8 +25,7 @@ export default async function ProviderPayoutPage() {
   if (!profile) redirect("/provider/profile");
 
   return (
-    <div className="min-h-screen bg-[#FDF6F0] font-sans text-slate-800 flex flex-col">
-      <Navbar />
+    <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
       <div className="max-w-lg mx-auto px-5 md:px-8 py-10 w-full flex-grow">
         <div className="flex items-center gap-2 mb-8">
           <span className="w-7 h-7 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center">✓</span>

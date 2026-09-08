@@ -1,7 +1,6 @@
 import { createClient } from "../../../lib/supabase/server";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import Navbar from "../../../components/Navbar";
 import BookingWidget from "../../../components/BookingWidget";
 import { formatMoney, paiseToRupees } from "../../../lib/money";
 
@@ -65,7 +64,6 @@ export default async function TherapistProfile({ params }: { params: Promise<{ i
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 pb-20 flex flex-col">
-      <Navbar />
       
       <div className="max-w-7xl mx-auto px-5 md:px-8 pt-8 mb-6 w-full flex-grow">
         {/* BREADCRUMBS */}

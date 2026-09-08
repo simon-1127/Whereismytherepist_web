@@ -1,8 +1,8 @@
 import Link from "next/link";
-import Navbar from "../components/Navbar";
 import { createClient } from "../lib/supabase/server";
 import { formatMoney } from "../lib/money";
 import TrustFooterBar from "../components/TrustFooterBar";
+import AnxietyInfoSection from "../components/AnxietyInfoSection";
 
 export const revalidate = 0;
 
@@ -42,7 +42,6 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 overflow-x-hidden flex flex-col">
-      <Navbar />
 
       {/* --- HERO SECTION --- */}
       <section className="px-5 md:px-8 py-10 md:py-20 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-12 items-center w-full">
@@ -130,6 +129,8 @@ export default async function Home() {
           </div>
         )}
       </section>
+
+      <AnxietyInfoSection />
 
       <TrustFooterBar />
 

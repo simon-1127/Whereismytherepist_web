@@ -5,27 +5,29 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "../lib/supabase/client";
 
-export default function Navbar() {
+type Role = "client" | "provider" | null;
+
+export default function Navbar({
+  initialUser = null,
+  initialRole = null,
+}: {
+  initialUser?: any;
+  initialRole?: Role;
+}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState<"client" | "provider" | null>(null);
-  const [roleLoaded, setRoleLoaded] = useState(false);
+  const [user, setUser] = useState<any>(initialUser);
+  const [role, setRole] = useState<Role>(initialRole);
 
   const router = useRouter();
   const supabase = createClient();
 
+  // Navbar now lives once in the root layout (see app/layout.tsx) instead of
+  // being rendered separately on every page, so this effect only runs ONCE
+  // per full page load — not on every client-side navigation. Combined with
+  // seeding state from server-fetched props above, this eliminates the old
+  // bug where the nav would flash/revert to the default (client) menu on
+  // every navigation while role was refetched from scratch.
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
-      if (session?.user) {
-        const { data: profile } = await supabase.from('users').select('role').eq('id', session.user.id).single();
-        setRole(profile?.role || null);
-      }
-      setRoleLoaded(true);
-    };
-    fetchUser();
-
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user || null);
       if (session?.user) {
@@ -34,10 +36,10 @@ export default function Navbar() {
       } else {
         setRole(null);
       }
-      setRoleLoaded(true);
     });
 
     return () => authListener.subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isProvider = role === "provider";
@@ -57,6 +59,7 @@ export default function Navbar() {
     ? [
         { href: "/provider/dashboard", label: "Dashboard" },
         { href: "/provider/bookings", label: "Bookings" },
+        { href: "/provider/availability", label: "Availability" },
         { href: "/provider/profile", label: "My Profile" },
       ]
     : [
@@ -74,7 +77,7 @@ export default function Navbar() {
           <Link href={homeHref}>
             <img src="/logo.png" alt="Where's My Therapist Logo" className="h-8 md:h-10" />
           </Link>
-          {roleLoaded && isProvider && (
+          {isProvider && (
             <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wide bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-100">
               Provider
             </span>

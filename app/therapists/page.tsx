@@ -1,7 +1,6 @@
 import { createClient } from "../../lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Navbar from "../../components/Navbar";
 import FilterSidebar from "../../components/FilterSidebar";
 import SortDropdown from "../../components/SortDropdown";
 import { formatMoney, rupeesToPaise } from "../../lib/money";
@@ -99,7 +98,6 @@ export default async function FindTherapist({ searchParams }: { searchParams: Pr
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 flex flex-col">
-      <Navbar />
 
       <div className="max-w-7xl mx-auto px-5 md:px-8 pt-8 pb-20 w-full flex-grow">
         <div className="flex justify-between items-end mb-8">

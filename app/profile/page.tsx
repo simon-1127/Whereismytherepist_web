@@ -1,6 +1,5 @@
 import { createClient } from "../../lib/supabase/server";
 import { redirect } from "next/navigation";
-import Navbar from "../../components/Navbar";
 import ClientProfileForm from "../../components/ClientProfileForm";
 
 export const revalidate = 0;
@@ -43,7 +42,6 @@ export default async function ClientProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 flex flex-col">
-      <Navbar />
       <div className="max-w-lg mx-auto px-5 md:px-8 py-10 w-full flex-grow">
         <h1 className="text-2xl font-extrabold text-[#1E1B4B] mb-1">
           {existingProfile ? "Edit your profile" : "Complete your profile"}

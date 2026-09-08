@@ -1,7 +1,6 @@
 import { createClient } from "../../../lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Navbar from "../../../components/Navbar";
 import ProviderProfileForm from "../../../components/provider/ProviderProfileForm";
 
 export const revalidate = 0;
@@ -26,7 +25,6 @@ export default async function ProviderProfilePage() {
   if (userRow?.role !== "provider") {
     return (
       <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 flex flex-col">
-        <Navbar />
         <div className="max-w-lg mx-auto text-center py-24 px-6">
           <p className="text-slate-700 font-semibold text-lg mb-2">This page is for providers only</p>
           <p className="text-slate-500 text-sm mb-6">
@@ -58,8 +56,7 @@ export default async function ProviderProfilePage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#FDF6F0] font-sans text-slate-800 flex flex-col">
-      <Navbar />
+    <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
       <div className="max-w-2xl mx-auto px-5 md:px-8 py-10 w-full flex-grow">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-2xl font-extrabold text-[#1E1B4B]">
