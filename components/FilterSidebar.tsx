@@ -32,12 +32,12 @@ function CheckboxGroup({
       <h4 className="font-semibold text-sm mb-4 text-slate-800">{title}</h4>
       <div className="space-y-3 text-sm text-slate-600 max-h-64 overflow-y-auto pr-1">
         {visibleOptions.map((opt) => (
-          <label key={opt.id} className="flex items-center gap-3 cursor-pointer">
+          <label key={opt.id} className="flex items-center gap-3 cursor-pointer rounded-lg px-1.5 py-1 -mx-1.5 transition-colors hover:bg-slate-50 hover:text-slate-900">
             <input
               type="checkbox"
               checked={selected.has(opt.id)}
               onChange={() => onToggle(opt.id)}
-              className="w-4 h-4 rounded text-blue-600"
+              className="w-4 h-4 rounded text-blue-600 transition-transform active:scale-90"
             />
             {opt.name}
           </label>
@@ -128,7 +128,7 @@ export default function FilterSidebar({
       <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
         <h3 className="font-bold text-[#1E1B4B] text-lg">Filters</h3>
         {hasActiveFilters && (
-          <button onClick={clearFilters} className="text-xs text-blue-600 font-semibold hover:underline">
+          <button onClick={clearFilters} className="text-xs text-blue-600 font-semibold hover:text-blue-800 hover:underline transition-colors">
             Clear all
           </button>
         )}

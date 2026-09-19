@@ -164,33 +164,21 @@ export default function AnxietyInfoSection() {
         </div>
 
         {/* Therapy Can Help You */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 flex flex-col sm:flex-row gap-6 items-start">
-          <div className="flex-1">
-            <h3 className="text-xl font-extrabold text-[#1E1B4B] mb-3">Therapy Can Help You</h3>
-            <p className="text-sm text-slate-600 leading-relaxed mb-5">
-              Our anxiety therapists use proven approaches to help you feel calmer and in control.
-            </p>
-            <ul className="space-y-3">
-              {THERAPY_APPROACHES.map((item) => (
-                <li key={item} className="flex items-center gap-2.5 text-sm text-slate-700">
-                  <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="shrink-0 mx-auto sm:mx-0">
-            <div className="w-32 h-32 rounded-full border-4 border-pink-200 flex flex-col items-center justify-center text-center">
-              <svg className="w-6 h-6 text-indigo-700 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4" />
-              </svg>
-              <p className="font-extrabold text-[#1E1B4B] leading-tight">20,000+</p>
-              <p className="text-[10px] text-slate-500 leading-tight px-2">People got help & healing</p>
-            </div>
-          </div>
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8">
+          <h3 className="text-xl font-extrabold text-[#1E1B4B] mb-3">Therapy Can Help You</h3>
+          <p className="text-sm text-slate-600 leading-relaxed mb-5">
+            Our anxiety therapists use proven approaches to help you feel calmer and in control.
+          </p>
+          <ul className="space-y-3">
+            {THERAPY_APPROACHES.map((item) => (
+              <li key={item} className="flex items-center gap-2.5 text-sm text-slate-700">
+                <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                {item}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>

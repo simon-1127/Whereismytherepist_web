@@ -32,7 +32,9 @@ export async function POST(request: Request) {
 
     // Best-effort cleanup of any of this provider's stale holds before we try
     // to grab this slot. Safe to skip if it errors — the RPC self-heals too.
-    await supabase.rpc("release_expired_holds").catch(() => {});
+    try {
+  await supabase.rpc("release_expired_holds");
+} catch {}
 
     const { data: holdResult, error: holdError } = await supabase
       .rpc("create_booking_hold", { p_slot_id: slotId })
