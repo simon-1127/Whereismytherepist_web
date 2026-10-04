@@ -1,0 +1,23 @@
+# Where's My Therapist
+
+> India-first online therapy platform. Find and book licensed psychologists, counsellors and therapists for private video sessions, filtered by concern, language and price, with payment by UPI, card or netbanking. Support in 10 Indian languages. Founded in Indore, India.
+
+## What it offers
+- Directory of licensed therapists (clinical psychologists, counselling psychologists, counsellors) working online across India
+- Filters: what you need help with (anxiety, depression, stress, relationships, family, trauma, grief, self-esteem, sleep, burnout), language, price per session
+- Private, encrypted video sessions (not recorded), joinable from the browser or the app
+- Prices set by each therapist and shown upfront, ₹500–₹1,200 per session; no subscription required to book
+- Mobile app with an AI companion, journal and mood tracking, guided breathing, MediTrack medication reminders and session reminders
+- Languages: English, Hindi, Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, Malayalam, Punjabi
+- App plans: Free (₹0), Starter (₹299/month), Growth (₹799/month)
+
+## Not an emergency service
+In a crisis in India, call Tele MANAS 14416 or KIRAN 1800-599-0019 (free, 24/7).
+
+## Key pages
+- [Home](https://www.wheresmytherapist.com/): overview, how it works, FAQ
+- [Find a therapist](https://www.wheresmytherapist.com/therapists): the directory
+- [About](https://www.wheresmytherapist.com/about): mission and team
+- [Contact](https://www.wheresmytherapist.com/contact): support@wheresmytherapist.com, WhatsApp +91 91117 76035
+- [Privacy policy](https://www.wheresmytherapist.com/privacy)
+- [Terms of use, medical and AI disclaimer](https://www.wheresmytherapist.com/terms)

@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 export function LegalPart({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="mb-16 last:mb-0">
-      <h2 className="text-2xl md:text-3xl font-extrabold text-[#1E1B4B] mb-8 pb-4 border-b border-slate-200">
+      <h2 className="mb-8 border-b border-line pb-4 text-3xl font-bold md:text-4xl">
         {title}
       </h2>
       <div className="space-y-10">{children}</div>
@@ -22,15 +22,15 @@ export function LegalSection({
 }) {
   return (
     <section id={id} className="scroll-mt-28">
-      <h3 className="text-lg font-bold text-[#1E1B4B] mb-3">{title}</h3>
-      <div className="text-sm text-slate-600 leading-relaxed space-y-3">{children}</div>
+      <h3 className="mb-3 text-xl font-semibold">{title}</h3>
+      <div className="max-w-[72ch] space-y-3 text-[16px] leading-relaxed text-ink-2">{children}</div>
     </section>
   );
 }
 
 export function LegalList({ items }: { items: string[] }) {
   return (
-    <ul className="list-disc pl-5 space-y-1.5 marker:text-slate-400">
+    <ul className="list-disc pl-5 space-y-1.5 marker:text-rose">
       {items.map((item) => (
         <li key={item}>{item}</li>
       ))}
@@ -42,7 +42,7 @@ export function TocLink({ href, children }: { href: string; children: ReactNode 
   return (
     <a
       href={href}
-      className="block text-sm text-slate-600 hover:text-blue-600 py-1.5 border-b border-slate-50 last:border-0 transition-colors"
+      className="block rounded-lg px-2 py-1.5 text-sm text-ink-2 hover:bg-mist hover:text-ink"
     >
       {children}
     </a>

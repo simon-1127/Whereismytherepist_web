@@ -4,24 +4,25 @@ import Footer from "../../components/Footer";
 import { LegalSection, LegalPart, LegalList, TocLink } from "../../components/legal/LegalBits";
 
 export const metadata = {
-  title: "Privacy Policy",
-  description: "How Where's My Therapist collects, uses, and protects your personal information.",
+  title: 'Privacy Policy',
+  description: "How Where's My Therapist collects, uses, stores and protects your personal and health information.",
+  alternates: { canonical: '/privacy' },
 };
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 flex flex-col">
+    <div className="flex flex-1 flex-col">
       <PageHeader
         title="Privacy"
         highlight="Policy"
         description="Last updated 14 September 2026. How we collect, use, store, and protect your personal information."
       />
 
-      <div className="max-w-6xl mx-auto px-5 md:px-8 py-12 w-full flex-grow grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-10">
+      <div className="shell grid w-full flex-grow grid-cols-1 gap-10 py-12 lg:grid-cols-[260px_1fr]">
         {/* TOC */}
         <aside className="hidden lg:block">
-          <div className="sticky top-6 bg-white border border-slate-200 rounded-2xl p-5 max-h-[80vh] overflow-y-auto">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Privacy Policy</p>
+          <div className="card sticky top-28 max-h-[75vh] overflow-y-auto p-5">
+            <p className="text-sm font-semibold text-ink-3 mb-3">Privacy Policy</p>
             <TocLink href="#privacy-1">1. About WMT</TocLink>
             <TocLink href="#privacy-2">2. Information We Collect</TocLink>
             <TocLink href="#privacy-3">3. Audio, Video & Transcription</TocLink>
@@ -41,18 +42,18 @@ export default function PrivacyPolicyPage() {
             <TocLink href="#privacy-17">17. Data Breaches</TocLink>
             <TocLink href="#privacy-18">18. Changes</TocLink>
             <TocLink href="#privacy-19">19. Contact</TocLink>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mt-5 mb-3">Third-Party Services</p>
+            <p className="text-sm font-semibold text-ink-3 mt-5 mb-3">Third-Party Services</p>
             <TocLink href="#thirdparty">Data Processing Partners</TocLink>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mt-5 mb-3">Therapy Confidentiality</p>
+            <p className="text-sm font-semibold text-ink-3 mt-5 mb-3">Therapy Confidentiality</p>
             <TocLink href="#consent">Consent & Confidentiality</TocLink>
           </div>
         </aside>
 
         {/* Content */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-10">
+        <div className="sheet p-6 md:p-12">
 
           <LegalPart title="Privacy Policy">
-            <p className="text-sm text-slate-500 mb-8">Effective Date: 14 September 2026</p>
+            <p className="text-sm text-ink-3 mb-8">Effective Date: 14 September 2026</p>
             <p className="mb-8">
               Where's My Therapist ("WMT", "we", "us", or "our") respects your privacy and is committed to
               protecting the personal information entrusted to us. This Privacy Policy explains how Where's
@@ -77,16 +78,16 @@ export default function PrivacyPolicyPage() {
 
             <LegalSection id="privacy-2" title="2. Information We Collect">
               <p>We collect only information reasonably necessary to provide, secure, improve, and administer the Services.</p>
-              <p className="font-semibold text-slate-700 mt-4">2.1 Information You Provide</p>
+              <p className="font-semibold text-ink-2 mt-4">2.1 Information You Provide</p>
               <p>Depending on the features you use, we may collect:</p>
-              <p className="font-semibold text-slate-700 mt-2">Account Information</p>
+              <p className="font-semibold text-ink-2 mt-2">Account Information</p>
               <LegalList items={[
                 "Name", "Email address", "Phone number", "Date of birth or age",
                 "Gender, where voluntarily provided", "Profile information",
                 "Login and authentication information", "Communication preferences",
                 "Other information required to maintain your account",
               ]} />
-              <p className="font-semibold text-slate-700 mt-4">Mental-Health Information</p>
+              <p className="font-semibold text-ink-2 mt-4">Mental-Health Information</p>
               <p>If you choose to use mental-health services, you may provide:</p>
               <LegalList items={[
                 "Mental-health concerns", "Symptoms and experiences", "Therapy goals", "Assessment responses",
@@ -95,7 +96,7 @@ export default function PrivacyPolicyPage() {
                 "Wellness information", "Progress information", "Other information you voluntarily provide",
               ]} />
               <p>Some of this information may constitute sensitive personal information or health-related information under applicable law.</p>
-              <p className="font-semibold text-slate-700 mt-4">Therapy Information</p>
+              <p className="font-semibold text-ink-2 mt-4">Therapy Information</p>
               <p>Depending on the service, we may process:</p>
               <LegalList items={[
                 "Appointment information", "Provider information", "Communications with providers",
@@ -141,13 +142,13 @@ export default function PrivacyPolicyPage() {
             </LegalSection>
 
             <LegalSection id="privacy-7" title="7. When We Share Information">
-              <p className="font-semibold text-slate-700">Healthcare Providers</p>
+              <p className="font-semibold text-ink-2">Healthcare Providers</p>
               <p>Information necessary to provide your requested service may be made available to your selected psychologist, therapist, psychiatrist, counsellor, or other provider.</p>
-              <p className="font-semibold text-slate-700 mt-4">Technology and Infrastructure Providers</p>
+              <p className="font-semibold text-ink-2 mt-4">Technology and Infrastructure Providers</p>
               <p>We may use third-party providers for:</p>
               <LegalList items={["Cloud infrastructure", "Data storage", "Video services", "Transcription", "AI processing", "Authentication", "Payments", "Messaging", "Email/SMS delivery", "Security", "Analytics", "Technical support"]} />
               <p>These providers may process information on our behalf and subject to appropriate contractual and security safeguards.</p>
-              <p className="font-semibold text-slate-700 mt-4">Employers / EAP Customers</p>
+              <p className="font-semibold text-ink-2 mt-4">Employers / EAP Customers</p>
               <p>Where you use WMT through an employer-sponsored EAP:</p>
               <LegalList items={[
                 "We may provide organizations with program-level or aggregated information",
@@ -156,13 +157,13 @@ export default function PrivacyPolicyPage() {
                 "We will not disclose individual therapy information merely because an employee participates in an EAP",
               ]} />
               <p>Any exceptions will be based on applicable law, a valid authorization, or clearly disclosed program terms.</p>
-              <p className="font-semibold text-slate-700 mt-4">Legal and Safety Reasons</p>
+              <p className="font-semibold text-ink-2 mt-4">Legal and Safety Reasons</p>
               <p>We may disclose information where reasonably necessary to:</p>
               <LegalList items={["Comply with applicable law", "Respond to lawful governmental requests", "Comply with court orders", "Protect someone from serious and imminent harm", "Investigate fraud or abuse", "Protect WMT's legal rights", "Enforce our agreements"]} />
             </LegalSection>
 
             <LegalSection id="privacy-8" title="8. Third-Party AI and Service Providers">
-              <p>If WMT uses third-party providers to process personal information, those providers may receive only the information reasonably necessary for the service they provide. WMT will take reasonable steps to require relevant providers to maintain appropriate security and confidentiality. A current list of the material third-party processors WMT uses is set out below in <a href="#thirdparty" className="text-indigo-600 underline">Third-Party Services & Data Processing</a>.</p>
+              <p>If WMT uses third-party providers to process personal information, those providers may receive only the information reasonably necessary for the service they provide. WMT will take reasonable steps to require relevant providers to maintain appropriate security and confidentiality. A current list of the material third-party processors WMT uses is set out below in <a href="#thirdparty" className="text-rose underline">Third-Party Services & Data Processing</a>.</p>
             </LegalSection>
 
             <LegalSection id="privacy-9" title="9. Data Security">
@@ -178,14 +179,14 @@ export default function PrivacyPolicyPage() {
             </LegalSection>
 
             <LegalSection id="privacy-11" title="11. Account Deletion">
-              <p>If you create a WMT account, you may request or initiate account deletion from within your account settings, or by contacting <a href="mailto:chitranshu@wheresmytherapist.com" className="text-indigo-600 underline">chitranshu@wheresmytherapist.com</a>.</p>
+              <p>If you create a WMT account, you may request or initiate account deletion from within your account settings, or by contacting <a href="mailto:chitranshu@wheresmytherapist.com" className="text-rose underline">chitranshu@wheresmytherapist.com</a>.</p>
               <p>Certain information may need to be retained where required by law, necessary to establish or defend legal claims, or otherwise permitted by applicable law. Apple requires apps that allow account creation to provide users with a mechanism to initiate account deletion within the app.</p>
             </LegalSection>
 
             <LegalSection id="privacy-12" title="12. Your Privacy Rights">
               <p>Subject to applicable law, you may have rights to:</p>
               <LegalList items={["Access personal information", "Request correction", "Request deletion", "Withdraw consent", "Request information regarding processing", "Raise a grievance", "Request other legally available rights"]} />
-              <p>Requests can be submitted to <a href="mailto:chitranshu@wheresmytherapist.com" className="text-indigo-600 underline">chitranshu@wheresmytherapist.com</a>. We may need to verify your identity before processing certain requests.</p>
+              <p>Requests can be submitted to <a href="mailto:chitranshu@wheresmytherapist.com" className="text-rose underline">chitranshu@wheresmytherapist.com</a>. We may need to verify your identity before processing certain requests.</p>
             </LegalSection>
 
             <LegalSection id="privacy-13" title="13. Children">
@@ -219,8 +220,8 @@ export default function PrivacyPolicyPage() {
 
             <LegalSection id="privacy-19" title="19. Contact">
               <p>Where's My Therapist</p>
-              <p>Email: <a href="mailto:chitranshu@wheresmytherapist.com" className="text-indigo-600 underline">chitranshu@wheresmytherapist.com</a></p>
-              <p>Website: <a href="https://wheresmytherapist.com/" className="text-indigo-600 underline">https://wheresmytherapist.com/</a></p>
+              <p>Email: <a href="mailto:chitranshu@wheresmytherapist.com" className="text-rose underline">chitranshu@wheresmytherapist.com</a></p>
+              <p>Website: <a href="https://wheresmytherapist.com/" className="text-rose underline">https://wheresmytherapist.com/</a></p>
             </LegalSection>
           </LegalPart>
 
@@ -347,7 +348,7 @@ export default function PrivacyPolicyPage() {
               </LegalSection>
 
               <LegalSection id="consent-12" title="12. Your Questions and Rights">
-                <p>If you have questions regarding confidentiality, data processing, transcription, AI analysis, or therapy-related information, contact <a href="mailto:chitranshu@wheresmytherapist.com" className="text-indigo-600 underline">chitranshu@wheresmytherapist.com</a>. You may also exercise applicable privacy rights as described in this Privacy Policy.</p>
+                <p>If you have questions regarding confidentiality, data processing, transcription, AI analysis, or therapy-related information, contact <a href="mailto:chitranshu@wheresmytherapist.com" className="text-rose underline">chitranshu@wheresmytherapist.com</a>. You may also exercise applicable privacy rights as described in this Privacy Policy.</p>
               </LegalSection>
 
               <LegalSection id="consent-13" title="13. Acknowledgement">

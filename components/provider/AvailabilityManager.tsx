@@ -1,273 +1,202 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
+import { fmtDayLong, fmtTime, istDayKey } from "../../lib/format";
 
-type Slot = {
-  id: string;
-  start_time: string;
-  end_time: string;
-  status: "open" | "held" | "booked" | "blocked";
+type Slot = { id: string; start_time: string; end_time: string; status: "open" | "held" | "booked" | "blocked" };
+
+const STATUS: Record<Slot["status"], { cls: string; label: string }> = {
+  open: { cls: "bg-paper border border-line text-ink", label: "Open" },
+  held: { cls: "bg-amber-soft text-amber", label: "Being booked" },
+  booked: { cls: "bg-teal-soft text-teal", label: "Booked" },
+  blocked: { cls: "bg-mist text-ink-3", label: "Blocked" },
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  open: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  held: "bg-amber-50 text-amber-700 border-amber-200",
-  booked: "bg-blue-50 text-blue-700 border-blue-200",
-  blocked: "bg-slate-100 text-slate-500 border-slate-200",
-};
+const IST_OFFSET = "+05:30";
+const dayKey = { format: (d: Date) => istDayKey(d) };
+const dayLabel = { format: (d: Date) => fmtDayLong(d) };
 
-function groupByDay(slots: Slot[]) {
-  const groups = new Map<string, Slot[]>();
-  for (const slot of slots) {
-    const key = new Date(slot.start_time).toDateString();
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(slot);
-  }
-  return Array.from(groups.entries())
-    .map(([key, daySlots]) => ({
-      key,
-      date: new Date(daySlots[0].start_time),
-      slots: daySlots.sort((a, b) => a.start_time.localeCompare(b.start_time)),
-    }))
-    .sort((a, b) => a.date.getTime() - b.date.getTime());
+function todayIST() {
+  return dayKey.format(new Date());
 }
 
-export default function AvailabilityManager({
-  providerId,
-  initialSlots,
-}: {
-  providerId: string;
-  initialSlots: Slot[];
-}) {
-  const router = useRouter();
-  const supabase = createClient();
+function groupByDay(slots: Slot[]) {
+  const map = new Map<string, Slot[]>();
+  for (const s of slots) {
+    const k = dayKey.format(new Date(s.start_time));
+    if (!map.has(k)) map.set(k, []);
+    map.get(k)!.push(s);
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, list]) => ({ key: k, label: dayLabel.format(new Date(list[0].start_time)), slots: list.sort((a, b) => a.start_time.localeCompare(b.start_time)) }));
+}
 
+export default function AvailabilityManager({ providerId, initialSlots }: { providerId: string; initialSlots: Slot[] }) {
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
   const [slots, setSlots] = useState<Slot[]>(initialSlots);
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const defaultDate = tomorrow.toISOString().split("T")[0];
+  const tomorrow = dayKey.format(new Date(Date.now() + 86_400_000));
+  const [date, setDate] = useState(tomorrow);
+  const [from, setFrom] = useState("10:00");
+  const [until, setUntil] = useState("18:00");
+  const [duration, setDuration] = useState("50");
+  const [gap, setGap] = useState("10");
 
-  const [date, setDate] = useState(defaultDate);
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("17:00");
-  const [duration, setDuration] = useState("60");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [ok, setOk] = useState("");
+  const [deleting, setDeleting] = useState<string | null>(null);
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Built explicitly in IST (+05:30), so the slots are right even if the
+  // therapist's computer clock is set to another timezone.
+  const preview = useMemo(() => {
+    const len = Number(duration) * 60_000;
+    const step = len + Number(gap) * 60_000;
+    const start = new Date(`${date}T${from}:00${IST_OFFSET}`).getTime();
+    const end = new Date(`${date}T${until}:00${IST_OFFSET}`).getTime();
+    const out: { start: Date; end: Date }[] = [];
+    if (!isFinite(start) || !isFinite(end)) return out;
+    for (let t = start; t + len <= end; t += step) out.push({ start: new Date(t), end: new Date(t + len) });
+    return out;
+  }, [date, from, until, duration, gap]);
 
-  const dayGroups = groupByDay(slots);
-
-  function buildSlotRanges(): { start: Date; end: Date }[] {
-    const durationMinutes = parseInt(duration, 10);
-    const [startH, startM] = startTime.split(":").map(Number);
-    const [endH, endM] = endTime.split(":").map(Number);
-
-    const dayStart = new Date(`${date}T00:00:00`);
-    const rangeStart = new Date(dayStart);
-    rangeStart.setHours(startH, startM, 0, 0);
-    const rangeEnd = new Date(dayStart);
-    rangeEnd.setHours(endH, endM, 0, 0);
-
-    const ranges: { start: Date; end: Date }[] = [];
-    let cursor = new Date(rangeStart);
-
-    while (true) {
-      const slotEnd = new Date(cursor.getTime() + durationMinutes * 60 * 1000);
-      if (slotEnd > rangeEnd) break;
-      ranges.push({ start: new Date(cursor), end: slotEnd });
-      cursor = slotEnd;
-    }
-
-    return ranges;
-  }
-
-  async function handleGenerate(e: React.FormEvent) {
+  async function add(e: React.FormEvent) {
     e.preventDefault();
-    setErrorMsg("");
-    setSuccessMsg("");
+    setError("");
+    setOk("");
+    if (!preview.length) return setError("That window is too short for one session of this length.");
+    if (preview[0].start.getTime() < Date.now()) return setError("Pick a time that hasn't passed yet.");
 
-    const ranges = buildSlotRanges();
+    const clash = preview.some((p) =>
+      slots.some((s) => new Date(s.start_time) < p.end && new Date(s.end_time) > p.start)
+    );
+    if (clash) return setError("Some of these times overlap slots you've already opened. Adjust the window and try again.");
 
-    if (ranges.length === 0) {
-      setErrorMsg("That time window is too short for even one session of the selected length.");
-      return;
-    }
-
-    if (ranges[0].start.getTime() < Date.now()) {
-      setErrorMsg("Pick a date/time window in the future.");
-      return;
-    }
-
-    setIsSaving(true);
-
+    setSaving(true);
     try {
-      const rows = ranges.map((r) => ({
-        provider_id: providerId,
-        start_time: r.start.toISOString(),
-        end_time: r.end.toISOString(),
-        status: "open" as const,
-      }));
-
-      const { data: inserted, error } = await supabase.from("availability_slots").insert(rows).select();
-
+      const { data, error } = await supabase
+        .from("availability_slots")
+        .insert(preview.map((p) => ({ provider_id: providerId, start_time: p.start.toISOString(), end_time: p.end.toISOString(), status: "open" })))
+        .select("id, start_time, end_time, status");
       if (error) throw new Error(error.message);
-
-      setSlots((prev) => [...prev, ...(inserted as Slot[])]);
-      setSuccessMsg(`Added ${ranges.length} slot${ranges.length > 1 ? "s" : ""} on ${new Date(date).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}.`);
+      setSlots((prev) => [...prev, ...((data as Slot[]) || [])]);
+      setOk(`Opened ${preview.length} ${preview.length === 1 ? "slot" : "slots"} on ${dayLabel.format(preview[0].start)}.`);
       router.refresh();
     } catch (err: any) {
-      setErrorMsg(err.message || "Could not create slots. Some may overlap with existing ones.");
+      setError(err.message || "Couldn't open those slots.");
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   }
 
-  async function handleDelete(slotId: string) {
-    setDeletingId(slotId);
-    setErrorMsg("");
-    try {
-      const { error } = await supabase.from("availability_slots").delete().eq("id", slotId);
-      if (error) throw new Error(error.message);
-      setSlots((prev) => prev.filter((s) => s.id !== slotId));
-      router.refresh();
-    } catch (err: any) {
-      setErrorMsg(err.message || "Could not remove that slot.");
-    } finally {
-      setDeletingId(null);
-    }
+  async function remove(id: string) {
+    setDeleting(id);
+    setError("");
+    const { error } = await supabase.from("availability_slots").delete().eq("id", id).eq("status", "open");
+    if (error) setError(error.message);
+    else setSlots((prev) => prev.filter((s) => s.id !== id));
+    setDeleting(null);
   }
 
-  const previewRanges = buildSlotRanges();
+  const days = groupByDay(slots);
+  const openCount = slots.filter((s) => s.status === "open").length;
+  const bookedCount = slots.filter((s) => s.status === "booked").length;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-      {/* Add availability form */}
-      <div className="lg:col-span-2">
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 sticky top-6">
-          <h2 className="font-bold text-[#1E1B4B] mb-4">Add availability</h2>
-          <form onSubmit={handleGenerate} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Date</label>
-              <input
-                type="date"
-                value={date}
-                min={new Date().toISOString().split("T")[0]}
-                onChange={(e) => setDate(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">From</label>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Until</label>
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Session length</label>
-              <select
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="30">30 minutes</option>
-                <option value="45">45 minutes</option>
-                <option value="60">60 minutes</option>
-                <option value="90">90 minutes</option>
-              </select>
-            </div>
-
-            {previewRanges.length > 0 && (
-              <p className="text-xs text-slate-500">
-                This will create <strong>{previewRanges.length}</strong> slot{previewRanges.length > 1 ? "s" : ""}, from{" "}
-                {previewRanges[0].start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} to{" "}
-                {previewRanges[previewRanges.length - 1].end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}.
-              </p>
-            )}
-
-            {errorMsg && (
-              <div className="bg-red-50 text-red-700 p-3 rounded-xl text-xs border border-red-100">{errorMsg}</div>
-            )}
-            {successMsg && (
-              <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl text-xs border border-emerald-100">{successMsg}</div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="w-full bg-[#1E1B4B] text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors disabled:opacity-50"
-            >
-              {isSaving ? "Adding…" : "Add slots"}
-            </button>
-          </form>
+    <div className="grid gap-8 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
+      <form onSubmit={add} className="sheet space-y-5 p-6 lg:sticky lg:top-28">
+        <h2 className="text-2xl font-semibold">Open new times</h2>
+        <div>
+          <label htmlFor="av-date" className="field-label">Day</label>
+          <input id="av-date" type="date" value={date} min={todayIST()} onChange={(e) => setDate(e.target.value)} required className="field" />
         </div>
-      </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="av-from" className="field-label">From</label>
+            <input id="av-from" type="time" value={from} onChange={(e) => setFrom(e.target.value)} required className="field" />
+          </div>
+          <div>
+            <label htmlFor="av-until" className="field-label">Until</label>
+            <input id="av-until" type="time" value={until} onChange={(e) => setUntil(e.target.value)} required className="field" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="av-len" className="field-label">Session length</label>
+            <select id="av-len" value={duration} onChange={(e) => setDuration(e.target.value)} className="field">
+              {[30, 45, 50, 60, 90].map((m) => <option key={m} value={m}>{m} min</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="av-gap" className="field-label">Break between</label>
+            <select id="av-gap" value={gap} onChange={(e) => setGap(e.target.value)} className="field">
+              {[0, 5, 10, 15, 30].map((m) => <option key={m} value={m}>{m === 0 ? "None" : `${m} min`}</option>)}
+            </select>
+          </div>
+        </div>
 
-      {/* Existing slots */}
-      <div className="lg:col-span-3">
-        <h2 className="font-bold text-[#1E1B4B] mb-4">Your upcoming availability</h2>
-        {dayGroups.length === 0 ? (
-          <div className="text-center py-16 text-slate-500 bg-slate-50 rounded-2xl border border-slate-200">
-            <p className="font-semibold text-slate-700">No upcoming availability yet</p>
-            <p className="text-sm mt-1">Add some slots using the form to start getting booked.</p>
+        <div className="well p-4">
+          {preview.length ? (
+            <>
+              <p className="text-sm font-semibold">{preview.length} {preview.length === 1 ? "slot" : "slots"} will open</p>
+              <p className="mt-1 text-sm text-ink-2">{preview.map((p) => fmtTime(p.start)).join(", ")}</p>
+            </>
+          ) : (
+            <p className="text-sm text-ink-3">No slots fit in this window yet.</p>
+          )}
+        </div>
+
+        {error && <p role="alert" className="alert alert-error">{error}</p>}
+        {ok && <p role="status" className="alert alert-ok">{ok}</p>}
+
+        <button type="submit" disabled={saving || !preview.length} className="btn btn-primary w-full">
+          {saving ? "Opening…" : `Open ${preview.length || ""} ${preview.length === 1 ? "slot" : "slots"}`}
+        </button>
+      </form>
+
+      <section aria-label="Your upcoming availability">
+        <div className="mb-5 flex flex-wrap items-center gap-2 text-sm">
+          <span className="chip">{openCount} open</span>
+          <span className="chip bg-teal-soft text-teal">{bookedCount} booked</span>
+        </div>
+        {days.length === 0 ? (
+          <div className="rounded-[var(--radius-card)] border-2 border-dashed border-line px-6 py-14 text-center">
+            <p className="font-display text-xl font-semibold">No times open yet</p>
+            <p className="mx-auto mt-2 max-w-sm text-ink-3">Open a few slots on the left. Clients can book them straight away.</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {dayGroups.map((group) => (
-              <div key={group.key}>
-                <p className="text-sm font-bold text-slate-700 mb-2">
-                  {group.date.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {group.slots.map((slot) => (
-                    <div
-                      key={slot.id}
-                      className={`relative border rounded-xl px-3 py-2.5 text-xs font-semibold flex items-center justify-between gap-2 ${STATUS_STYLES[slot.status]}`}
-                    >
-                      <span>
-                        {new Date(slot.start_time).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
-                      </span>
-                      {slot.status === "open" ? (
+          <div className="space-y-4">
+            {days.map((d) => (
+              <div key={d.key} className="card p-5">
+                <h3 className="text-lg font-semibold">{d.label}</h3>
+                <ul className="mt-3 flex flex-wrap gap-2">
+                  {d.slots.map((s) => (
+                    <li key={s.id} className={`inline-flex items-center gap-2 rounded-full py-1.5 pl-3.5 text-sm font-semibold ${STATUS[s.status].cls} ${s.status === "open" ? "pr-1.5" : "pr-3.5"}`}>
+                      {fmtTime(s.start_time)}
+                      {s.status === "open" ? (
                         <button
-                          onClick={() => handleDelete(slot.id)}
-                          disabled={deletingId === slot.id}
-                          className="text-current opacity-60 hover:opacity-100 transition-opacity"
-                          title="Remove this slot"
+                          onClick={() => remove(s.id)}
+                          disabled={deleting === s.id}
+                          aria-label={`Remove ${fmtTime(s.start_time)} slot`}
+                          className="grid h-6 w-6 place-items-center rounded-full text-ink-3 hover:bg-rose-soft hover:text-rose-deep"
                         >
-                          {deletingId === slot.id ? "…" : "✕"}
+                          {deleting === s.id ? "…" : "×"}
                         </button>
                       ) : (
-                        <span className="capitalize opacity-70">{slot.status}</span>
+                        <span className="font-normal opacity-80">{STATUS[s.status].label}</span>
                       )}
-                    </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

@@ -1,58 +1,63 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 type LookupItem = { id: string; name: string };
 
-function parseIds(value: string | null): Set<string> {
-  return new Set(value ? value.split(",").filter(Boolean) : []);
+import { SESSION_PRICE_MAX, SESSION_PRICE_MIN } from "../lib/pricing";
+
+const MIN = SESSION_PRICE_MIN;
+const MAX = SESSION_PRICE_MAX;
+const STEP = 50;
+
+function parseIds(v: string | null) {
+  return new Set(v ? v.split(",").filter(Boolean) : []);
 }
 
-function CheckboxGroup({
+function ChipGroup({
   title,
   options,
   selected,
   onToggle,
-  maxVisible = 6,
+  initial = 8,
 }: {
   title: string;
   options: LookupItem[];
   selected: Set<string>;
   onToggle: (id: string) => void;
-  maxVisible?: number;
+  initial?: number;
 }) {
-  const [showAll, setShowAll] = useState(false);
-  const visibleOptions = showAll ? options : options.slice(0, maxVisible);
-
-  if (options.length === 0) return null;
-
+  const [all, setAll] = useState(false);
+  if (!options.length) return null;
+  const shown = all ? options : options.slice(0, initial);
   return (
-    <div className="mb-8">
-      <h4 className="font-semibold text-sm mb-4 text-slate-800">{title}</h4>
-      <div className="space-y-3 text-sm text-slate-600 max-h-64 overflow-y-auto pr-1">
-        {visibleOptions.map((opt) => (
-          <label key={opt.id} className="flex items-center gap-3 cursor-pointer rounded-lg px-1.5 py-1 -mx-1.5 transition-colors hover:bg-slate-50 hover:text-slate-900">
-            <input
-              type="checkbox"
-              checked={selected.has(opt.id)}
-              onChange={() => onToggle(opt.id)}
-              className="w-4 h-4 rounded text-blue-600 transition-transform active:scale-90"
-            />
-            {opt.name}
-          </label>
-        ))}
+    <fieldset className="border-t border-line pt-5">
+      <legend className="float-left mb-3 w-full text-sm font-semibold">{title}</legend>
+      <div className="clear-left flex flex-wrap gap-2">
+        {shown.map((o) => {
+          const on = selected.has(o.id);
+          return (
+            <button
+              key={o.id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onToggle(o.id)}
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                on ? "bg-brand text-white" : "bg-mist text-ink-2 hover:bg-mist-2"
+              }`}
+            >
+              {o.name}
+            </button>
+          );
+        })}
       </div>
-      {options.length > maxVisible && (
-        <button
-          type="button"
-          onClick={() => setShowAll(!showAll)}
-          className="text-xs text-blue-600 font-semibold hover:underline mt-3"
-        >
-          {showAll ? "Show less" : `Show ${options.length - maxVisible} more`}
+      {options.length > initial && (
+        <button type="button" onClick={() => setAll(!all)} className="mt-3 text-sm font-semibold text-rose hover:underline">
+          {all ? "Show fewer" : `Show all ${options.length}`}
         </button>
       )}
-    </div>
+    </fieldset>
   );
 }
 
@@ -64,126 +69,84 @@ export default function FilterSidebar({
   languageOptions: LookupItem[];
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const params = useSearchParams();
+  const [pending, startTransition] = useTransition();
 
-  const minLimit = 500;
-  const maxLimit = 5000;
-
-  const [minPrice, setMinPrice] = useState(parseInt(searchParams.get("minPrice") || "500"));
-  const [maxPrice, setMaxPrice] = useState(parseInt(searchParams.get("maxPrice") || "5000"));
-  const [selectedSpecialties, setSelectedSpecialties] = useState(parseIds(searchParams.get("specialties")));
-  const [selectedLanguages, setSelectedLanguages] = useState(parseIds(searchParams.get("languages")));
+  const [minPrice, setMinPrice] = useState(Number(params.get("minPrice")) || MIN);
+  const [maxPrice, setMaxPrice] = useState(Number(params.get("maxPrice")) || MAX);
+  const [specs, setSpecs] = useState(parseIds(params.get("specialties")));
+  const [langs, setLangs] = useState(parseIds(params.get("languages")));
+  const firstRun = useRef(true);
 
   useEffect(() => {
-    const delay = setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("minPrice", minPrice.toString());
-      params.set("maxPrice", maxPrice.toString());
-
-      if (selectedSpecialties.size > 0) params.set("specialties", Array.from(selectedSpecialties).join(","));
-      else params.delete("specialties");
-
-      if (selectedLanguages.size > 0) params.set("languages", Array.from(selectedLanguages).join(","));
-      else params.delete("languages");
-
-      if (params.toString() !== searchParams.toString()) {
-        router.push(`?${params.toString()}`, { scroll: false });
+    // Don't push on mount: the old version immediately wrote minPrice=500
+    // into the URL before anyone touched the slider.
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      const next = new URLSearchParams(params.toString());
+      minPrice > MIN ? next.set("minPrice", String(minPrice)) : next.delete("minPrice");
+      maxPrice < MAX ? next.set("maxPrice", String(maxPrice)) : next.delete("maxPrice");
+      specs.size ? next.set("specialties", [...specs].join(",")) : next.delete("specialties");
+      langs.size ? next.set("languages", [...langs].join(",")) : next.delete("languages");
+      if (next.toString() !== params.toString()) {
+        startTransition(() => router.replace(`/therapists${next.toString() ? `?${next}` : ""}`, { scroll: false }));
       }
-    }, 300);
-
-    return () => clearTimeout(delay);
+    }, 350);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [minPrice, maxPrice, selectedSpecialties, selectedLanguages]);
+  }, [minPrice, maxPrice, specs, langs]);
 
-  const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMinPrice(Math.min(parseInt(e.target.value), maxPrice - 100));
-  };
-  const handleMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMaxPrice(Math.max(parseInt(e.target.value), minPrice + 100));
-  };
-
-  function toggle(set: Set<string>, setter: (s: Set<string>) => void, id: string) {
-    const next = new Set(set);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setter(next);
-  }
-
-  const clearFilters = () => {
-    setMinPrice(minLimit);
-    setMaxPrice(maxLimit);
-    setSelectedSpecialties(new Set());
-    setSelectedLanguages(new Set());
-    router.push("/therapists");
+  const toggle = (set: Set<string>, setter: (s: Set<string>) => void, id: string) => {
+    const n = new Set(set);
+    n.has(id) ? n.delete(id) : n.add(id);
+    setter(n);
   };
 
-  const leftPercent = ((minPrice - minLimit) / (maxLimit - minLimit)) * 100;
-  const rightPercent = 100 - ((maxPrice - minLimit) / (maxLimit - minLimit)) * 100;
-
-  const hasActiveFilters =
-    selectedSpecialties.size > 0 || selectedLanguages.size > 0 || minPrice !== minLimit || maxPrice !== maxLimit;
+  const active = specs.size > 0 || langs.size > 0 || minPrice > MIN || maxPrice < MAX;
+  const left = ((minPrice - MIN) / (MAX - MIN)) * 100;
+  const right = 100 - ((maxPrice - MIN) / (MAX - MIN)) * 100;
+  const thumb =
+    "absolute -top-2 h-5 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-brand [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-brand";
 
   return (
-    <div className="w-full lg:w-72 shrink-0 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-fit">
-      <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-        <h3 className="font-bold text-[#1E1B4B] text-lg">Filters</h3>
-        {hasActiveFilters && (
-          <button onClick={clearFilters} className="text-xs text-blue-600 font-semibold hover:text-blue-800 hover:underline transition-colors">
-            Clear all
+    <div className="card space-y-5 p-5" aria-busy={pending}>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Narrow it down</h2>
+        {active && (
+          <button
+            onClick={() => {
+              firstRun.current = false;
+              setMinPrice(MIN);
+              setMaxPrice(MAX);
+              setSpecs(new Set());
+              setLangs(new Set());
+            }}
+            className="text-sm font-semibold text-rose hover:underline"
+          >
+            Reset
           </button>
         )}
       </div>
 
-      <CheckboxGroup
-        title="Specialties"
-        options={specialtyOptions}
-        selected={selectedSpecialties}
-        onToggle={(id) => toggle(selectedSpecialties, setSelectedSpecialties, id)}
-      />
-
-      <CheckboxGroup
-        title="Languages"
-        options={languageOptions}
-        selected={selectedLanguages}
-        onToggle={(id) => toggle(selectedLanguages, setSelectedLanguages, id)}
-      />
-
-      <div>
-        <h4 className="font-semibold text-sm mb-6 text-slate-800">
-          Price: ₹{minPrice} - ₹{maxPrice}
-        </h4>
-
-        <div className="relative h-1.5 bg-slate-200 rounded-full mb-4">
-          <div
-            className="absolute h-full bg-pink-500 rounded-full"
-            style={{ left: `${leftPercent}%`, right: `${rightPercent}%` }}
-          ></div>
-
-          <input
-            type="range"
-            min={minLimit}
-            max={maxLimit}
-            step="100"
-            value={minPrice}
-            onChange={handleMinChange}
-            className="absolute w-full -top-1.5 h-4 appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:bg-pink-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-grab"
-          />
-          <input
-            type="range"
-            min={minLimit}
-            max={maxLimit}
-            step="100"
-            value={maxPrice}
-            onChange={handleMaxChange}
-            className="absolute w-full -top-1.5 h-4 appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:bg-pink-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-grab"
-          />
+      <fieldset className="border-t border-line pt-5">
+        <legend className="float-left mb-1 w-full text-sm font-semibold">Price per session</legend>
+        <p className="clear-left mb-5 font-display text-lg font-semibold">
+          ₹{minPrice.toLocaleString("en-IN")} – ₹{maxPrice.toLocaleString("en-IN")}
+        </p>
+        <div className="relative mx-1 h-1.5 rounded-full bg-mist-2">
+          <div className="absolute h-full rounded-full bg-brand" style={{ left: `${left}%`, right: `${right}%` }} />
+          <input aria-label="Minimum price" type="range" min={MIN} max={MAX} step={STEP} value={minPrice}
+            onChange={(e) => setMinPrice(Math.min(Number(e.target.value), maxPrice - STEP))} className={thumb} />
+          <input aria-label="Maximum price" type="range" min={MIN} max={MAX} step={STEP} value={maxPrice}
+            onChange={(e) => setMaxPrice(Math.max(Number(e.target.value), minPrice + STEP))} className={thumb} />
         </div>
+      </fieldset>
 
-        <div className="flex justify-between text-xs text-slate-500 font-medium">
-          <span>₹500</span>
-          <span>₹5000+</span>
-        </div>
-      </div>
+      <ChipGroup title="What you'd like help with" options={specialtyOptions} selected={specs} onToggle={(id) => toggle(specs, setSpecs, id)} />
+      <ChipGroup title="Language" options={languageOptions} selected={langs} onToggle={(id) => toggle(langs, setLangs, id)} />
     </div>
   );
 }

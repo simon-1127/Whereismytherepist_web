@@ -3,12 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../lib/supabase/client";
+import { dateParts, fmtTime, istDayKey } from "../lib/format";
 
-type Slot = {
-  id: string;
-  start_time: string;
-  end_time: string;
-};
+type Slot = { id: string; start_time: string; end_time: string };
 
 declare global {
   interface Window {
@@ -16,258 +13,231 @@ declare global {
   }
 }
 
-function loadRazorpayScript(): Promise<boolean> {
+function loadRazorpay(): Promise<boolean> {
   return new Promise((resolve) => {
     if (window.Razorpay) return resolve(true);
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
   });
 }
 
-function groupSlotsByDay(slots: Slot[]) {
+// Group by the IST calendar day, so a 12:30 AM slot isn't filed under the
+// previous day for someone whose laptop clock is set to another zone.
+function groupByDay(slots: Slot[]) {
   const groups = new Map<string, Slot[]>();
   for (const slot of slots) {
-    const dayKey = new Date(slot.start_time).toDateString();
-    if (!groups.has(dayKey)) groups.set(dayKey, []);
-    groups.get(dayKey)!.push(slot);
+    const key = istDayKey(slot.start_time);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(slot);
   }
-  return Array.from(groups.entries()).map(([dayKey, daySlots]) => ({
-    dayKey,
-    date: new Date(daySlots[0].start_time),
-    slots: daySlots.sort((a, b) => a.start_time.localeCompare(b.start_time)),
-  }));
+  return Array.from(groups.entries()).map(([key, list]) => {
+    const p = dateParts(list[0].start_time);
+    return {
+      key,
+      weekday: p.weekday,
+      day: p.day,
+      month: p.month,
+      slots: list.sort((a, b) => a.start_time.localeCompare(b.start_time)),
+    };
+  });
 }
 
 export default function BookingWidget({
   providerId,
   providerName,
-  sessionRate,
-  currency,
+  rateLabel,
 }: {
   providerId: string;
   providerName: string;
-  sessionRate: number;
-  currency: string;
+  rateLabel: string;
 }) {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [slots, setSlots] = useState<Slot[]>([]);
-  const [loadingSlots, setLoadingSlots] = useState(true);
-  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const [isBooking, setIsBooking] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [dayKey, setDayKey] = useState<string | null>(null);
+  const [slotId, setSlotId] = useState<string | null>(null);
+  const [busy, setBusy] = useState<null | "starting" | "paying" | "confirming">(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
-
-    async function fetchSlots() {
-      setLoadingSlots(true);
-      const { data, error } = await supabase
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase
         .from("availability_slots")
         .select("id, start_time, end_time")
         .eq("provider_id", providerId)
         .eq("status", "open")
-        .gte("start_time", new Date().toISOString())
+        .gte("start_time", new Date(Date.now() + 15 * 60_000).toISOString())
         .order("start_time", { ascending: true })
-        .limit(60);
-
-      if (!cancelled) {
-        if (!error && data) {
-          setSlots(data as Slot[]);
-          if (data.length > 0) {
-            setSelectedDayKey(new Date(data[0].start_time).toDateString());
-          }
-        }
-        setLoadingSlots(false);
-      }
-    }
-
-    fetchSlots();
+        .limit(120);
+      if (cancelled) return;
+      const list = (data as Slot[]) || [];
+      setSlots(list);
+      if (list.length) setDayKey(istDayKey(list[0].start_time));
+      setLoading(false);
+    })();
     return () => {
       cancelled = true;
     };
-  }, [providerId]);
+  }, [providerId, supabase]);
 
-  const dayGroups = useMemo(() => groupSlotsByDay(slots), [slots]);
-  const activeDayGroup = dayGroups.find((g) => g.dayKey === selectedDayKey);
-
-  const currencySymbol = currency === "INR" ? "₹" : "";
+  const days = useMemo(() => groupByDay(slots), [slots]);
+  const activeDay = days.find((d) => d.key === dayKey);
+  const selected = slots.find((s) => s.id === slotId);
 
   async function handleBook() {
-    if (!selectedSlotId) return;
-    setErrorMsg("");
+    if (!slotId) return;
+    setError("");
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
-
     if (!user) {
-      router.push("/login");
+      router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
 
-    setIsBooking(true);
-
+    setBusy("starting");
     try {
-      const orderRes = await fetch("/api/bookings/create-order", {
+      const res = await fetch("/api/bookings/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId: selectedSlotId }),
+        body: JSON.stringify({ slotId }),
       });
-      const orderData = await orderRes.json();
-
-      if (!orderRes.ok) {
-        throw new Error(orderData.error || "Could not start booking");
+      const order = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 409) setSlots((prev) => prev.filter((s) => s.id !== slotId));
+        throw new Error(order.error || "Could not start the booking.");
       }
 
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        throw new Error("Could not load payment gateway. Check your connection and try again.");
-      }
+      if (!(await loadRazorpay())) throw new Error("The payment window couldn't load. Check your connection and try again.");
 
-      const razorpay = new window.Razorpay({
-        key: orderData.razorpayKeyId,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        order_id: orderData.orderId,
+      setBusy("paying");
+      const rzp = new window.Razorpay({
+        key: order.razorpayKeyId,
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.orderId,
         name: "Where's My Therapist",
         description: `Session with ${providerName}`,
         prefill: { email: user.email || undefined },
-        theme: { color: "#1E1B4B" },
-        handler: async function (response: any) {
-          try {
-            const verifyRes = await fetch("/api/bookings/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                sessionId: orderData.sessionId,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                amount: orderData.amount,
-              }),
-            });
-            const verifyData = await verifyRes.json();
-
-            if (!verifyRes.ok) {
-              throw new Error(verifyData.error || "Payment succeeded but confirmation failed. Contact support.");
-            }
-
-            router.push(`/sessions/${orderData.sessionId}`);
-          } catch (err: any) {
-            setErrorMsg(err.message);
-            setIsBooking(false);
-          }
+        theme: { color: "#1b1a47" },
+        handler: async (response: any) => {
+          setBusy("confirming");
+          // Best effort: the session page re-checks Razorpay itself, so a
+          // failure here can no longer leave a paid booking stuck.
+          await fetch("/api/bookings/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId: order.sessionId,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          }).catch(() => undefined);
+          router.push(`/sessions/${order.sessionId}`);
         },
-        modal: {
-          ondismiss: function () {
-            setIsBooking(false);
-          },
-        },
+        modal: { ondismiss: () => setBusy(null) },
       });
-
-      razorpay.on("payment.failed", function (response: any) {
-        setErrorMsg(response.error?.description || "Payment failed. Please try again.");
-        setIsBooking(false);
+      rzp.on("payment.failed", (r: any) => {
+        setError(r?.error?.description || "The payment didn't go through. You haven't been charged — try again.");
+        setBusy(null);
       });
-
-      razorpay.open();
+      rzp.open();
     } catch (err: any) {
-      setErrorMsg(err.message || "Something went wrong");
-      setIsBooking(false);
+      setError(err.message || "Something went wrong. Please try again.");
+      setBusy(null);
     }
   }
 
+  const buttonLabel =
+    busy === "starting" ? "Reserving your slot…" : busy === "paying" ? "Complete payment in the window" : busy === "confirming" ? "Confirming…" : selected ? `Pay ${rateLabel} and book` : "Choose a time";
+
   return (
-    <div className="w-full md:w-[320px] shrink-0 border border-slate-200 rounded-3xl p-6 bg-slate-50/50 flex flex-col h-fit">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-bold text-[#1E1B4B]">Book a Session</h3>
-        <span className="text-sm font-bold text-pink-600">
-          {currencySymbol}
-          {sessionRate}
-        </span>
+    <div className="overflow-hidden card">
+      <div className="flex items-baseline justify-between bg-brand px-5 py-4 text-white">
+        <h2 className="font-display text-xl font-semibold">Book a session</h2>
+        <p>
+          <span className="font-display text-xl font-semibold">{rateLabel}</span>
+          <span className="text-sm text-white/60"> / session</span>
+        </p>
       </div>
 
-      {loadingSlots ? (
-        <p className="text-sm text-slate-500 py-6 text-center">Loading availability…</p>
-      ) : dayGroups.length === 0 ? (
-        <p className="text-sm text-slate-500 py-6 text-center">
-          No open slots right now. Please check back soon.
+      <div className="p-5">
+        {loading ? (
+          <div className="space-y-3" aria-busy="true">
+            <div className="h-[72px] animate-pulse rounded-[var(--radius-inner)] bg-mist" />
+            <div className="h-28 animate-pulse rounded-[var(--radius-inner)] bg-mist" />
+          </div>
+        ) : days.length === 0 ? (
+          <p className="well px-4 py-6 text-center text-ink-2">
+            No open times right now. {providerName.split(" ")[0]} usually adds new slots each week.
+          </p>
+        ) : (
+          <>
+            <p className="mb-2 text-sm font-semibold">Day</p>
+            <div className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1" role="listbox" aria-label="Choose a day">
+              {days.map((d) => {
+                const on = d.key === dayKey;
+                return (
+                  <button
+                    key={d.key}
+                    role="option"
+                    aria-selected={on}
+                    onClick={() => {
+                      setDayKey(d.key);
+                      setSlotId(null);
+                    }}
+                    className={`flex w-[64px] shrink-0 flex-col items-center rounded-[var(--radius-inner)] py-2 transition-colors ${
+                      on ? "bg-brand text-white" : "bg-mist text-ink hover:bg-mist-2"
+                    }`}
+                  >
+                    <span className={`text-xs font-semibold ${on ? "text-white/70" : "text-ink-3"}`}>{d.weekday}</span>
+                    <span className="font-display text-2xl font-bold leading-tight">{d.day}</span>
+                    <span className={`text-xs ${on ? "text-white/70" : "text-ink-3"}`}>{d.month}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="mb-2 text-sm font-semibold">Time (IST)</p>
+            <div className="grid grid-cols-3 gap-2" role="listbox" aria-label="Choose a time">
+              {activeDay?.slots.map((s) => {
+                const on = s.id === slotId;
+                return (
+                  <button
+                    key={s.id}
+                    role="option"
+                    aria-selected={on}
+                    onClick={() => setSlotId(s.id)}
+                    className={`rounded-full py-2 text-sm font-semibold transition-colors ${
+                      on ? "bg-brand text-white border border-transparent" : "bg-paper text-ink border border-line hover:border-brand-violet/40"
+                    }`}
+                  >
+                    {fmtTime(s.start_time)}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {error && <p className="alert alert-error mt-5">{error}</p>}
+
+        <button onClick={handleBook} disabled={!slotId || !!busy} className="btn btn-primary mt-5 w-full">
+          {buttonLabel}
+        </button>
+        <p className="mt-3 text-center text-[13px] text-ink-3">
+          UPI, cards and netbanking via Razorpay. Your slot is held for 15 minutes while you pay.
         </p>
-      ) : (
-        <>
-          {/* Day tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1">
-            {dayGroups.map((group) => {
-              const isSelected = group.dayKey === selectedDayKey;
-              return (
-                <button
-                  key={group.dayKey}
-                  onClick={() => {
-                    setSelectedDayKey(group.dayKey);
-                    setSelectedSlotId(null);
-                  }}
-                  className={`shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-xl border text-sm font-semibold transition-colors ${
-                    isSelected
-                      ? "border-[#1E1B4B] bg-white text-[#1E1B4B]"
-                      : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
-                  }`}
-                >
-                  <span className="text-[10px] uppercase text-slate-400">
-                    {group.date.toLocaleDateString(undefined, { weekday: "short" })}
-                  </span>
-                  <span className="text-lg">{group.date.getDate()}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Time slots for the selected day */}
-          <div className="grid grid-cols-3 gap-2 mb-5">
-            {activeDayGroup?.slots.map((slot) => {
-              const isSelected = slot.id === selectedSlotId;
-              return (
-                <button
-                  key={slot.id}
-                  onClick={() => setSelectedSlotId(slot.id)}
-                  className={`py-2 rounded-lg border text-xs font-semibold transition-colors ${
-                    isSelected
-                      ? "border-pink-500 bg-pink-50 text-pink-700"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
-                  }`}
-                >
-                  {new Date(slot.start_time).toLocaleTimeString(undefined, {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {errorMsg && (
-        <div className="bg-red-50 text-red-700 p-3 rounded-xl text-xs border border-red-100 mb-4">
-          {errorMsg}
-        </div>
-      )}
-
-      <button
-        onClick={handleBook}
-        disabled={!selectedSlotId || isBooking}
-        className="w-full bg-gradient-to-r from-blue-700 to-pink-500 text-white py-3.5 rounded-xl font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        {isBooking ? "Processing…" : "Book & Pay"}
-      </button>
-      <p className="text-[11px] text-slate-400 text-center mt-3">
-        Secure payment via Razorpay. You'll get a confirmation once payment completes.
-      </p>
+      </div>
     </div>
   );
 }

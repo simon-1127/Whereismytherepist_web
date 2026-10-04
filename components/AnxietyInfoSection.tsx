@@ -124,61 +124,44 @@ const THERAPY_APPROACHES = [
 
 export default function AnxietyInfoSection() {
   return (
-    <section className="px-4 sm:px-8 py-6 md:py-10 max-w-7xl mx-auto w-full space-y-6">
-      {/* Top 5 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {TOP_CARDS.map((card) => (
-          <div key={card.title} className="bg-white border border-slate-200 rounded-2xl p-5">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center mb-3">
-              {card.icon}
-            </div>
-            <p className="font-bold text-[#1E1B4B] text-sm mb-1">{card.title}</p>
-            <p className="text-xs text-slate-500 leading-relaxed">{card.description}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Two-column content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* What is Anxiety? */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8">
-          <h3 className="text-xl font-extrabold text-[#1E1B4B] mb-3">What is Anxiety?</h3>
-          <p className="text-sm text-slate-600 leading-relaxed mb-6">
-            Anxiety is a natural response to stress or danger. But when it becomes frequent,
-            overwhelming, or interferes with daily life, it may be an anxiety disorder. Therapy can
-            help you understand the root causes and build tools to manage it effectively.
+    <section className="shell pb-16 md:pb-24">
+      <div data-reveal-group className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+        <div className="sheet p-6 md:p-10">
+          <h2 className="text-4xl font-bold md:text-[2.8rem]">Is it anxiety?</h2>
+          <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-ink-2">
+            Anxiety is a normal response to stress. When it&rsquo;s frequent, overwhelming or gets in the way of daily life, it may be
+            an anxiety disorder, and therapy can help you understand where it comes from and what to do about it.
           </p>
-
-          <h4 className="font-bold text-[#1E1B4B] mb-4">Common Signs of Anxiety</h4>
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            {COMMON_SIGNS.map((sign) => (
-              <div key={sign.label} className="flex items-center gap-2.5 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700">
-                <span className="text-indigo-500 shrink-0">{sign.icon}</span>
-                {sign.label}
-              </div>
-            ))}
-          </div>
-          <a href="#" className="text-sm font-semibold text-blue-700 hover:text-blue-800 flex items-center gap-1.5">
-            View all symptoms <span>→</span>
-          </a>
-        </div>
-
-        {/* Therapy Can Help You */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8">
-          <h3 className="text-xl font-extrabold text-[#1E1B4B] mb-3">Therapy Can Help You</h3>
-          <p className="text-sm text-slate-600 leading-relaxed mb-5">
-            Our anxiety therapists use proven approaches to help you feel calmer and in control.
-          </p>
-          <ul className="space-y-3">
-            {THERAPY_APPROACHES.map((item) => (
-              <li key={item} className="flex items-center gap-2.5 text-sm text-slate-700">
-                <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-                {item}
+          <h3 className="mt-8 text-lg font-semibold">Common signs</h3>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {COMMON_SIGNS.map((s) => (
+              <li key={s.label} className="inline-flex items-center gap-2 rounded-full bg-mist px-3.5 py-2 text-[15px]">
+                <span className="text-rose">{s.icon}</span>
+                {s.label}
               </li>
             ))}
           </ul>
+          <p className="mt-6 text-sm text-ink-3">
+            Recognising a few of these doesn&rsquo;t mean you have a disorder. A therapist can help you make sense of it.
+          </p>
+        </div>
+
+        <div className="rounded-[var(--radius-sheet)] bg-lilac p-6 md:p-10">
+          <h2 className="text-3xl font-bold">What therapy works on</h2>
+          <ul className="mt-6 space-y-5">
+            {TOP_CARDS.map((c) => (
+              <li key={c.title} className="flex gap-4">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-paper text-ink">{c.icon}</span>
+                <div>
+                  <p className="font-display text-lg font-semibold">{c.title}</p>
+                  <p className="text-ink-2">{c.description}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-8 border-t border-ink/10 pt-5 text-[15px] text-ink-2">
+            Common approaches: {THERAPY_APPROACHES.join(", ")}.
+          </p>
         </div>
       </div>
     </section>

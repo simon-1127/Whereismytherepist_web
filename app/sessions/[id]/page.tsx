@@ -1,170 +1,168 @@
-import { createClient } from "../../../lib/supabase/server";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { createClient } from "../../../lib/supabase/server";
 import { formatMoney } from "../../../lib/money";
+import { fmtDayLong, fmtDayShort, fmtTime, fmtTimeRange, minutesBetween } from "../../../lib/format";
+import { displayStatus } from "../../../lib/sessions";
+import { canJoinSession, joinWindow } from "../../../lib/daily";
+import { Avatar, StatusPill } from "../../../components/ui";
+import PaymentWatcher from "../../../components/PaymentWatcher";
+import Footer from "../../../components/Footer";
 
-export const revalidate = 0;
-
-const STATUS_STYLES: Record<string, string> = {
-  pending_payment: "bg-amber-50 text-amber-700 border-amber-200",
-  confirmed: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  in_progress: "bg-blue-50 text-blue-700 border-blue-200",
-  completed: "bg-slate-100 text-slate-600 border-slate-200",
-  cancelled_by_client: "bg-red-50 text-red-700 border-red-200",
-  cancelled_by_provider: "bg-red-50 text-red-700 border-red-200",
-  no_show_client: "bg-red-50 text-red-700 border-red-200",
-  no_show_provider: "bg-red-50 text-red-700 border-red-200",
-  refunded: "bg-slate-100 text-slate-600 border-slate-200",
-  disputed: "bg-red-50 text-red-700 border-red-200",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pending_payment: "Payment pending",
-  confirmed: "Confirmed",
-  in_progress: "In progress",
-  completed: "Completed",
-  cancelled_by_client: "Cancelled",
-  cancelled_by_provider: "Cancelled by provider",
-  no_show_client: "You missed this session",
-  no_show_provider: "Provider missed this session",
-  refunded: "Refunded",
-  disputed: "Disputed",
-};
+export const dynamic = "force-dynamic";
 
 export default async function SessionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect(`/login?next=/sessions/${id}`);
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
-        <div className="max-w-lg mx-auto text-center py-24">
-          <p className="text-slate-600 mb-4">Please sign in to view this booking.</p>
-          <Link href="/login" className="text-blue-700 font-semibold">Sign in →</Link>
-        </div>
-      </div>
-    );
-  }
-
-  const { data: session, error } = await supabase
-    .from("sessions")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (error || !session) {
-    notFound();
-  }
+  const { data: session } = await supabase.from("sessions").select("*").eq("id", id).maybeSingle();
+  if (!session) notFound();
 
   const isClient = session.client_id === user.id;
   const isProvider = session.provider_id === user.id;
+  if (!isClient && !isProvider) notFound();
 
-  if (!isClient && !isProvider) {
-    notFound();
-  }
-
-  // Look up the other party's display name.
-  let otherPartyName = "the other participant";
+  let other: { name: string; title?: string | null; photo?: string | null; id?: string } = { name: "Client" };
   if (isClient) {
-    const { data: providerProfile } = await supabase
+    const { data: p } = await supabase
       .from("provider_profiles")
-      .select("full_name, professional_title")
+      .select("full_name, professional_title, photo_url")
       .eq("user_id", session.provider_id)
-      .single();
-    otherPartyName = providerProfile?.full_name || otherPartyName;
+      .maybeSingle();
+    other = { name: p?.full_name || "Your therapist", title: p?.professional_title, photo: p?.photo_url, id: session.provider_id };
   } else {
-    const { data: clientProfile } = await supabase
-      .from("client_profiles")
-      .select("full_name")
-      .eq("user_id", session.client_id)
-      .single();
-    otherPartyName = clientProfile?.full_name || otherPartyName;
+    const { data: c } = await supabase.from("client_profiles").select("full_name").eq("user_id", session.client_id).maybeSingle();
+    other = { name: c?.full_name || "Client" };
   }
 
-  const scheduledStart = new Date(session.scheduled_start);
-  const scheduledEnd = new Date(session.scheduled_end);
-  const now = new Date();
+  const now = Date.now();
+  const display = displayStatus(session, now);
+  const canJoin = canJoinSession(session, now);
+  const { opensAt } = joinWindow(session.scheduled_start, session.scheduled_end);
+  const backHref = isProvider ? "/provider/bookings" : "/sessions";
 
-  // Allow joining from 10 minutes before start until the scheduled end.
-  const canJoin =
-    session.status === "confirmed" &&
-    now.getTime() >= scheduledStart.getTime() - 10 * 60 * 1000 &&
-    now.getTime() <= scheduledEnd.getTime();
-
-  const hasNotStartedYet = session.status === "confirmed" && now < scheduledStart;
+  // Session log: a real sequence of what happened to this booking.
+  const paid = !["pending_payment"].includes(session.status);
+  const log: { when?: string; label: string; done: boolean }[] = [
+    { when: session.created_at, label: "Slot reserved", done: true },
+    { label: paid ? "Payment received, session confirmed" : "Waiting for payment", done: paid },
+  ];
+  if (session.cancelled_at || session.status.startsWith("cancelled")) {
+    log.push({ when: session.cancelled_at, label: display.label, done: true });
+  } else if (session.status === "refunded") {
+    log.push({ label: "Refunded", done: true });
+  } else {
+    log.push({ when: session.actual_start, label: "Video room opened", done: !!session.actual_start });
+    log.push({
+      when: session.actual_end || (display.label === "Completed" ? session.scheduled_end : undefined),
+      label: "Session finished",
+      done: display.bucket === "history",
+    });
+  }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 flex flex-col">
+    <>
+    <main className="shell max-w-[1080px] py-10 md:py-14">
+      <Link href={backHref} className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-ink-2 hover:text-ink">
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 18l-6-6 6-6" /></svg>
+        All sessions
+      </Link>
 
-      <div className="max-w-2xl mx-auto px-5 md:px-8 py-10 w-full flex-grow">
-        <Link href={isProvider ? "/provider/bookings" : "/sessions"} className="text-sm text-blue-700 font-semibold mb-6 inline-block">
-          ← Back to bookings
-        </Link>
+      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_300px]">
+        <section className="sheet overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-4 p-6 md:p-8">
+            <div className="flex items-center gap-4">
+              <Avatar name={other.name} src={other.photo} size={64} />
+              <div>
+                <p className="text-sm text-ink-3">Session with</p>
+                <h1 className="text-3xl font-bold">{other.name}</h1>
+                {other.title && <p className="text-ink-2">{other.title}</p>}
+              </div>
+            </div>
+            <StatusPill display={display} />
+          </div>
 
-        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100">
-          <div className="flex justify-between items-start mb-6">
+          <div className="mx-6 h-px bg-line" aria-hidden />
+
+          <dl className="grid gap-6 p-6 sm:grid-cols-[1.3fr_1.2fr_0.7fr] md:p-8">
             <div>
-              <p className="text-sm text-slate-500 mb-1">
-                {isClient ? "Session with" : "Session with"}
-              </p>
-              <h1 className="text-2xl font-extrabold text-[#1E1B4B]">{otherPartyName}</h1>
+              <dt className="text-sm text-ink-3">Date</dt>
+              <dd className="mt-1 font-display text-xl font-semibold">{fmtDayLong(session.scheduled_start)}</dd>
             </div>
-            <span
-              className={`text-xs font-bold px-3 py-1.5 rounded-full border shrink-0 ${
-                STATUS_STYLES[session.status] || "bg-slate-100 text-slate-600 border-slate-200"
-              }`}
-            >
-              {STATUS_LABELS[session.status] || session.status}
-            </span>
+            <div>
+              <dt className="text-sm text-ink-3">Time (IST)</dt>
+              <dd className="mt-1 font-display text-xl font-semibold">{fmtTimeRange(session.scheduled_start, session.scheduled_end)}</dd>
+              <dd className="text-sm text-ink-3">{minutesBetween(session.scheduled_start, session.scheduled_end)} minutes, online</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-ink-3">{isProvider ? "You earn" : "Paid"}</dt>
+              <dd className="mt-1 font-display text-xl font-semibold">
+                {formatMoney(isProvider ? session.provider_payout_amount : session.amount, session.currency)}
+              </dd>
+            </div>
+          </dl>
+
+          <div className="space-y-4 px-6 pb-6 md:px-8 md:pb-8">
+            {session.status === "pending_payment" && display.bucket === "upcoming" && isClient && (
+              <PaymentWatcher sessionId={session.id} />
+            )}
+
+            {canJoin ? (
+              <Link href={`/sessions/${session.id}/room`} className="btn btn-primary btn-lg w-full">
+                Join video call
+              </Link>
+            ) : display.bucket === "upcoming" && session.status !== "pending_payment" ? (
+              <div className="well px-5 py-4 text-center text-ink-2">
+                The call opens at <strong className="text-ink">{fmtTime(new Date(opensAt))}</strong> on{" "}
+                {fmtDayShort(new Date(opensAt))}, 10 minutes before you start.
+              </div>
+            ) : null}
+
+            {display.bucket !== "upcoming" && isClient && other.id && (
+              <Link href={`/therapists/${other.id}`} className="btn btn-quiet w-full">
+                Book another session with {other.name.split(" ")[0]}
+              </Link>
+            )}
           </div>
+        </section>
 
-          <div className="grid grid-cols-2 gap-4 mb-8 text-sm">
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-slate-500 mb-1">Date & time</p>
-              <p className="font-semibold text-[#1E1B4B]">
-                {scheduledStart.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
-              </p>
-              <p className="font-semibold text-[#1E1B4B]">
-                {scheduledStart.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} –{" "}
-                {scheduledEnd.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
-              </p>
-            </div>
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-slate-500 mb-1">Amount</p>
-              <p className="font-semibold text-[#1E1B4B]">
-                {formatMoney(session.amount, session.currency)}
-              </p>
-            </div>
-          </div>
-
-          {session.status === "pending_payment" && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4 mb-6">
-              This booking hasn't been paid for yet. If you closed the payment window, the slot hold may expire — please book again.
-            </div>
-          )}
-
-          {canJoin ? (
-            <Link
-              href={`/sessions/${session.id}/room`}
-              className="w-full bg-gradient-to-r from-blue-700 to-pink-500 text-white py-3.5 rounded-xl font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-            >
-              Join video call
-            </Link>
-          ) : hasNotStartedYet ? (
-            <div className="w-full bg-slate-100 text-slate-500 py-3.5 rounded-xl font-semibold text-center">
-              You'll be able to join 10 minutes before the session starts
-            </div>
-          ) : session.status === "completed" ? (
-            <div className="w-full bg-slate-100 text-slate-500 py-3.5 rounded-xl font-semibold text-center">
-              This session has ended
-            </div>
-          ) : null}
-        </div>
+        <aside className="card h-fit p-6">
+          <h2 className="text-lg font-semibold">Session log</h2>
+          <ol className="mt-5 space-y-0">
+            {log.map((step, i) => (
+              <li key={i} className="relative flex gap-3 pb-5 last:pb-0">
+                {i < log.length - 1 && <span className="absolute left-[7px] top-5 h-full w-px bg-line" aria-hidden />}
+                <span
+                  className={`relative mt-1 h-[15px] w-[15px] shrink-0 rounded-full ${
+                    step.done ? "bg-teal" : "border-2 border-line bg-paper"
+                  }`}
+                />
+                <div>
+                  <p className={`text-[15px] font-semibold ${step.done ? "text-ink" : "text-ink-3"}`}>{step.label}</p>
+                  {step.when && step.done && (
+                    <p className="text-[13px] text-ink-3">
+                      {fmtDayShort(step.when)}, {fmtTime(step.when)}
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-6 border-t border-line pt-4 text-[13px] text-ink-3">
+            Need help with this booking? Write to{" "}
+            <a className="link" href={`mailto:support@wheresmytherapist.com?subject=Session%20${session.id.slice(0, 8)}`}>
+              support
+            </a>{" "}
+            and mention reference {session.id.slice(0, 8)}.
+          </p>
+        </aside>
       </div>
-    </div>
+    </main>
+    <Footer />
+    </>
   );
 }

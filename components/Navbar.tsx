@@ -1,221 +1,333 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "../lib/supabase/client";
 
 type Role = "client" | "provider" | null;
+type NavUser = { id: string; email: string | null; name?: string | null } | null;
+
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 export default function Navbar({
   initialUser = null,
   initialRole = null,
 }: {
-  initialUser?: any;
+  initialUser?: NavUser;
   initialRole?: Role;
 }) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [user, setUser] = useState<any>(initialUser);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState<NavUser>(initialUser);
   const [role, setRole] = useState<Role>(initialRole);
+  const [signingOut, setSigningOut] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const userIdRef = useRef<string | null>(initialUser?.id ?? null);
 
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
-  // Navbar now lives once in the root layout (see app/layout.tsx) instead of
-  // being rendered separately on every page, so this effect only runs ONCE
-  // per full page load — not on every client-side navigation. Combined with
-  // seeding state from server-fetched props above, this eliminates the old
-  // bug where the nav would flash/revert to the default (client) menu on
-  // every navigation while role was refetched from scratch.
+  // Server props win after every navigation (router.refresh, sign-in).
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user || null);
-      if (session?.user) {
-        const { data: profile } = await supabase.from('users').select('role').eq('id', session.user.id).single();
-        setRole(profile?.role || null);
-      } else {
+    setUser(initialUser);
+    setRole(initialRole);
+    userIdRef.current = initialUser?.id ?? null;
+  }, [initialUser?.id, initialUser?.name, initialRole]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const nextId = session?.user?.id ?? null;
+      // TOKEN_REFRESHED fires every hour with the same user; skip it.
+      if (nextId === userIdRef.current) return;
+      userIdRef.current = nextId;
+      setUser(session?.user ? { id: session.user.id, email: session.user.email ?? null } : null);
+      if (!nextId) {
         setRole(null);
+        return;
       }
+      supabase
+        .from("users")
+        .select("role")
+        .eq("id", nextId)
+        .single()
+        .then(({ data: row }) => setRole((row?.role as Role) || null));
+      if (event === "SIGNED_IN") router.refresh();
     });
+    return () => data.subscription.unsubscribe();
+  }, [supabase, router]);
 
-    return () => authListener.subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => setMenuOpen(false), [pathname]);
 
-  // Tiny bit of scroll-awareness so the bar reads as "floating glass" over
-  // the hero and settles into a crisper, more opaque bar once content is
-  // scrolling underneath it.
+  // Shrinks once you scroll; slides away while scrolling down and comes
+  // back as soon as you scroll up.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    let last = window.scrollY;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        setScrolled(y > 12);
+        if (Math.abs(y - last) > 6) {
+          setHidden(y > last && y > 220);
+          last = y;
+        }
+        ticking = false;
+      });
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
-    setIsMenuOpen(false);
-  }, [pathname]);
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
 
   const isProvider = role === "provider";
 
-  const handleLogout = async () => {
+  async function handleLogout() {
+    setSigningOut(true);
     await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
-  };
+    window.location.assign("/");
+  }
 
-  // Provider accounts are a completely separate section of the site — no
-  // "Therapists" browsing, no client booking nav, nothing crossed over.
-  // There is intentionally no "become a provider" link anywhere: provider
-  // accounts are provisioned by an admin directly in the database (see
-  // sql/002_lock_provider_writes_to_role.sql), never through the app.
-  const navLinks = isProvider
+  const links = isProvider
     ? [
         { href: "/provider/dashboard", label: "Dashboard" },
-        { href: "/provider/bookings", label: "Bookings" },
+        { href: "/provider/bookings", label: "Sessions" },
         { href: "/provider/availability", label: "Availability" },
-        { href: "/provider/profile", label: "My Profile" },
       ]
     : [
-        { href: "/", label: "Home" },
-        { href: "/therapists", label: "Therapists" },
-        ...(user ? [{ href: "/sessions", label: "My Bookings" }] : []),
-        ...(user ? [{ href: "/profile", label: "My Profile" }] : []),
-        { href: "/about", label: "About Us" },
+        { href: "/therapists", label: "Find a therapist" },
+        ...(user ? [{ href: "/sessions", label: "My sessions" }] : []),
+        { href: "/about", label: "About" },
         { href: "/contact", label: "Contact" },
       ];
 
   const homeHref = isProvider ? "/provider/dashboard" : "/";
+  const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
+  const accountHref = isProvider ? "/provider/profile" : "/profile";
+  const displayName = user?.name || user?.email || "";
+  const letter = (displayName.trim()[0] || "?").toUpperCase();
 
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname?.startsWith(href));
+  // ---- Sliding indicator: sits under the current page, follows the hover ----
+  const linksRef = useRef<HTMLDivElement>(null);
+  const [bar, setBar] = useState<{ left: number; width: number; show: boolean }>({ left: 0, width: 0, show: false });
+
+  const moveTo = useCallback((el: HTMLElement | null) => {
+    if (!el || !linksRef.current) return setBar((b) => ({ ...b, show: false }));
+    const host = linksRef.current.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    setBar({ left: r.left - host.left + 14, width: r.width - 28, show: true });
+  }, []);
+
+  const resetBar = useCallback(() => {
+    moveTo(linksRef.current?.querySelector<HTMLElement>('[aria-current="page"]') ?? null);
+  }, [moveTo]);
+
+  useIsoLayoutEffect(() => {
+    resetBar();
+  }, [pathname, links.length, resetBar]);
+
+  useEffect(() => {
+    const onResize = () => resetBar();
+    window.addEventListener("resize", onResize);
+    document.fonts?.ready.then(resetBar).catch(() => undefined);
+    return () => window.removeEventListener("resize", onResize);
+  }, [resetBar]);
+
+  const accountActive = isActive(accountHref);
+  // On the home page the bar starts see-through over the hero, then turns
+  // solid once you scroll.
+  const overHero = pathname === "/" && !scrolled && !menuOpen;
 
   return (
     <>
-      <nav
-        className={`sticky top-0 z-40 flex items-center justify-between px-5 md:px-8 transition-all duration-300 relative ${
-          scrolled
-            ? "py-3 bg-white/85 backdrop-blur-md shadow-[0_1px_0_0_rgba(15,23,42,0.06),0_8px_24px_-12px_rgba(30,27,75,0.18)]"
-            : "py-5 bg-gradient-to-b from-white/80 via-white/60 to-white/40 backdrop-blur-sm"
-        } border-b border-slate-100`}
+      <header
+        className={`nav-enter sticky top-0 z-40 border-b transition-[transform,background-color,box-shadow,border-color] duration-300 ease-out ${
+          overHero
+            ? "border-transparent bg-transparent"
+            : scrolled
+              ? "border-line bg-white/90 shadow-[0_8px_30px_-20px_rgb(82_44_173/0.4)] backdrop-blur-xl"
+              : "border-transparent bg-white/80 backdrop-blur-xl"
+        } ${hidden && !menuOpen ? "-translate-y-full" : "translate-y-0"}`}
       >
-        {/* Signature brand hairline — a quiet constant across every page */}
-        <div aria-hidden className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-blue-600 via-indigo-400 to-pink-500 opacity-70" />
-        <div className="flex items-center gap-3">
-          <Link href={homeHref} className="group relative flex items-center gap-3">
-            <span aria-hidden className="absolute -inset-2 rounded-full bg-gradient-to-r from-blue-400/0 via-indigo-400/0 to-pink-400/0 blur-lg transition-all duration-300 group-hover:from-blue-400/20 group-hover:via-indigo-400/20 group-hover:to-pink-400/20" />
+        {/* Logo gradient hairline */}
+        <div aria-hidden className="h-[3px] bg-[linear-gradient(90deg,#00b8bc,#0077c6,#522cad,#ff5266,#00b8bc)] bg-[length:200%_100%] animate-[hairline_10s_linear_infinite]" />
+        <nav
+          aria-label="Main"
+          className={`shell flex items-center gap-6 transition-[height] duration-300 ease-out ${scrolled ? "h-[62px]" : "h-[74px]"}`}
+        >
+          <Link href={homeHref} className="group flex shrink-0 items-center gap-2.5" aria-label="Where's My Therapist home">
             <img
-              src="/logo.png"
-              alt="Where's My Therapist Logo"
-              className="relative h-8 md:h-10 transition-transform duration-300 ease-out group-hover:scale-105 group-hover:-rotate-2"
+              src="/favicon.png"
+              alt=""
+              className={`object-contain transition-[transform,width,height] duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110 ${
+                scrolled ? "h-9 w-9" : "h-11 w-11"
+              }`}
             />
+            <span className="hidden leading-none sm:block">
+              <span className="block font-display text-[19px] font-bold tracking-tight text-ink">wheres</span>
+              <span className="text-brand block font-display text-[17px] font-semibold tracking-tight transition-[letter-spacing] duration-300 group-hover:tracking-normal">
+                my therapist
+              </span>
+            </span>
           </Link>
           {isProvider && (
-            <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wide bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-100">
-              Provider
+            <span className="hidden rounded-full bg-lilac px-2.5 py-1 text-xs font-semibold text-brand-violet lg:inline">
+              Therapist account
             </span>
           )}
-        </div>
 
-        {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-1 text-sm font-medium text-slate-700">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`group relative px-3.5 py-2 rounded-full transition-colors duration-200 ${
-                isActive(link.href) ? "text-[#1E1B4B]" : "hover:text-blue-600"
-              }`}
-            >
-              {isActive(link.href) && (
-                <span className="absolute inset-0 -z-10 rounded-full bg-gradient-to-r from-blue-600/10 via-indigo-500/10 to-pink-500/10 border border-indigo-100" />
-              )}
-              <span className="relative inline-flex items-center gap-1.5">
-                {isActive(link.href) && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-blue-600 to-pink-500" />
-                )}
-                {link.label}
-                {!isActive(link.href) && (
-                  <span className="pointer-events-none absolute left-0 -bottom-1.5 h-[2px] w-0 rounded-full bg-gradient-to-r from-blue-600 to-pink-500 transition-all duration-300 ease-out group-hover:w-full" />
-                )}
-              </span>
-            </Link>
-          ))}
-        </div>
+          <div ref={linksRef} onMouseLeave={resetBar} className="relative ml-auto hidden h-full items-stretch md:flex">
+            {links.map((l) => {
+              const on = isActive(l.href);
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  aria-current={on ? "page" : undefined}
+                  onMouseEnter={(e) => moveTo(e.currentTarget)}
+                  onFocus={(e) => moveTo(e.currentTarget)}
+                  onBlur={resetBar}
+                  className={`relative flex items-center px-3.5 text-[15px] transition-[color,transform] duration-200 hover:-translate-y-px ${
+                    on ? "font-semibold text-ink" : "font-medium text-ink-2 hover:text-brand-violet"
+                  }`}
+                >
+                  {l.label}
+                </Link>
+              );
+            })}
+            {/* One indicator that glides between links */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-0 h-[3px] rounded-t-full bg-[linear-gradient(90deg,#00b8bc,#0077c6,#522cad)] transition-[left,width,opacity] duration-300 ease-[cubic-bezier(.2,.7,.2,1)]"
+              style={{ left: bar.left, width: bar.width, opacity: bar.show ? 1 : 0 }}
+            />
+          </div>
 
-        <div className="flex items-center gap-4 md:gap-6">
-          {user ? (
-            <div className="hidden md:flex items-center gap-4">
-              <div className="flex flex-col text-right">
-                <span className="text-sm font-bold text-[#1E1B4B]">{isProvider ? "Provider Account" : "My Account"}</span>
-                <span className="text-[10px] text-slate-500">{user.email}</span>
+          <div className="ml-auto flex items-center gap-2 md:ml-2">
+            {user ? (
+              <div className="hidden items-center gap-3 md:flex">
+                <span aria-hidden className="h-6 w-px bg-line" />
+                <Link
+                  href={accountHref}
+                  aria-label={`Your profile${user.name ? ` (${user.name})` : ""}`}
+                  title={displayName}
+                  aria-current={accountActive ? "page" : undefined}
+                  className="group relative grid h-10 w-10 place-items-center rounded-full"
+                >
+                  {/* Gradient ring that brightens and turns on hover / when on the profile page */}
+                  <span
+                    aria-hidden
+                    className={`absolute -inset-[3px] rounded-full bg-[conic-gradient(from_0deg,#00b8bc,#0077c6,#522cad,#ff5266,#00b8bc)] transition-[opacity,transform] duration-500 group-hover:rotate-180 ${
+                      accountActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    }`}
+                  />
+                  <span className="relative grid h-10 w-10 place-items-center rounded-full bg-brand font-display text-base font-semibold text-white ring-2 ring-white transition-transform duration-300 group-hover:scale-95">
+                    {letter}
+                  </span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  disabled={signingOut}
+                  className="text-sm font-semibold text-ink-3 transition-colors hover:text-rose disabled:opacity-50"
+                >
+                  {signingOut ? "Signing out…" : "Sign out"}
+                </button>
               </div>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 text-sm font-semibold text-slate-600 border border-slate-200 rounded-full transition-all duration-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 hover:shadow-sm active:scale-95"
+            ) : (
+              <div className="hidden items-center gap-2 md:flex">
+                <span aria-hidden className="mr-2 h-6 w-px bg-line" />
+                <Link href="/login" className="px-3 text-[15px] font-semibold text-ink-2 transition-colors hover:text-brand-violet">
+                  Sign in
+                </Link>
+                <Link href="/login?mode=signup" className="btn btn-primary btn-sm btn-shine hover:-translate-y-0.5">
+                  Get started
+                </Link>
+              </div>
+            )}
+
+            {user && (
+              <Link
+                href={accountHref}
+                aria-label="Your profile"
+                className="grid h-10 w-10 place-items-center rounded-full bg-brand font-display text-base font-semibold text-white md:hidden"
               >
-                Logout
-              </button>
-            </div>
-          ) : (
-            <Link
-              href="/login"
-              className="hidden md:inline-flex items-center bg-gradient-to-r from-blue-700 to-pink-500 text-white px-6 py-2.5 rounded-full text-sm font-semibold shadow-sm transition-all duration-200 hover:opacity-95 hover:shadow-lg hover:shadow-pink-500/20 hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                {letter}
+              </Link>
+            )}
+            <button
+              className="grid h-11 w-11 place-items-center rounded-full border border-line bg-white text-ink transition-transform active:scale-90 md:hidden"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open menu"
+              aria-expanded={menuOpen}
             >
-              Sign In
-            </Link>
-          )}
-
-          {/* Mobile Hamburger Button */}
-          <button
-            className="md:hidden p-2 text-slate-600 rounded-full transition-colors hover:bg-slate-100 active:scale-90"
-            onClick={() => setIsMenuOpen(true)}
-            aria-label="Open menu"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-          </button>
-        </div>
-      </nav>
-
-      {/* MOBILE SLIDE-OUT MENU */}
-      {isMenuOpen && (
-        <div
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 md:hidden animate-[fade-in_0.2s_ease-out]"
-          onClick={() => setIsMenuOpen(false)}
-        />
-      )}
-
-      <div className={`fixed top-0 right-0 h-full w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out md:hidden ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
-        <div aria-hidden className="h-1 w-full bg-gradient-to-r from-blue-600 via-indigo-400 to-pink-500" />
-        <div className="p-5 flex justify-end">
-          <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-500 rounded-full transition-colors hover:bg-slate-100 hover:text-slate-700 active:scale-90">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
-        </div>
-        <div className="flex flex-col gap-6 px-6 text-lg font-medium text-slate-700">
-          {user && <span className="text-sm text-slate-400 border-b border-slate-100 pb-2 truncate">{user.email}{isProvider ? " · Provider" : ""}</span>}
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setIsMenuOpen(false)}
-              className={`border-b border-slate-100 pb-3 transition-colors ${isActive(link.href) ? "text-blue-600" : "hover:text-blue-600"}`}
-            >
-              {link.label}
-            </Link>
-          ))}
-          {user ? (
-            <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="mt-4 border border-red-200 text-red-600 px-6 py-3 rounded-full text-base font-semibold w-full text-center transition-transform active:scale-95">
-              Logout
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" d="M4 8h16M4 16h16" />
+              </svg>
             </button>
-          ) : (
-            <Link href="/login" className="mt-4 bg-gradient-to-r from-blue-700 to-pink-500 text-white px-6 py-3 rounded-full text-base font-semibold w-full text-center transition-transform active:scale-95">
-              Sign In
-            </Link>
-          )}
+          </div>
+        </nav>
+      </header>
+
+      {/* Mobile: bottom sheet, reachable with a thumb; links slide in one by one */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <button
+            aria-label="Close menu"
+            className="absolute inset-0 bg-ink/40 backdrop-blur-[2px] animate-[fade-in_.2s_ease-out]"
+            onClick={() => setMenuOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-[var(--radius-sheet)] bg-paper px-5 pb-8 pt-3 animate-[sheet-up_.32s_cubic-bezier(.2,.8,.2,1)]">
+            <div className="mx-auto mb-5 h-1.5 w-10 rounded-full bg-line" />
+            {user && (
+              <div className="mb-4 flex items-center gap-3 px-1">
+                <span className="grid h-11 w-11 place-items-center rounded-full bg-brand font-display text-lg font-semibold text-white">{letter}</span>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{user.name || "Your account"}</p>
+                  <p className="truncate text-sm text-ink-3">
+                    {user.email}
+                    {isProvider ? " (therapist)" : ""}
+                  </p>
+                </div>
+              </div>
+            )}
+            <div className="flex flex-col">
+              {[{ href: homeHref, label: "Home" }, ...links, ...(user ? [{ href: accountHref, label: "Profile" }] : [])].map((l, i) => (
+                <Link
+                  key={l.href + l.label}
+                  href={l.href}
+                  style={{ animation: `item-in .4s ${80 + i * 45}ms cubic-bezier(.2,.7,.2,1) both` }}
+                  className={`flex items-center justify-between rounded-2xl px-4 py-3.5 font-display text-xl font-semibold transition-colors ${
+                    isActive(l.href) && l.href !== "/" ? "bg-lilac text-brand-violet" : "text-ink-2 active:bg-mist"
+                  }`}
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </div>
+            <div className="mt-5" style={{ animation: "item-in .4s 320ms cubic-bezier(.2,.7,.2,1) both" }}>
+              {user ? (
+                <button onClick={handleLogout} disabled={signingOut} className="btn btn-quiet w-full">
+                  {signingOut ? "Signing out…" : "Sign out"}
+                </button>
+              ) : (
+                <Link href="/login" className="btn btn-primary w-full">
+                  Sign in or create account
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

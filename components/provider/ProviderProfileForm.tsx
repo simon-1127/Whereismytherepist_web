@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 import { AGE_GROUPS } from "../../lib/constants";
 import { paiseToRupees, rupeesToPaise } from "../../lib/money";
+import { SESSION_PRICE_MAX, SESSION_PRICE_MIN } from "../../lib/pricing";
 
 type LookupItem = { id: string; name: string };
 
@@ -20,6 +21,7 @@ type ExistingProfile = {
   approach_statement: string | null;
   photo_url: string | null;
   video_intro_url: string | null;
+  application_status?: string | null;
 };
 
 function ChipSelector({
@@ -40,10 +42,10 @@ function ChipSelector({
             type="button"
             key={opt.id}
             onClick={() => onToggle(opt.id)}
-            className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-full border text-sm font-semibold transition-colors ${
               isSelected
-                ? "bg-emerald-50 border-emerald-600 text-emerald-800"
-                : "bg-white border-slate-300 text-slate-600 hover:border-slate-400"
+                ? "bg-brand border-ink text-white"
+                : "bg-mist border-transparent text-ink-2 hover:bg-mist-2"
             }`}
           >
             {isSelected && <span className="mr-1.5">✓</span>}
@@ -75,7 +77,10 @@ export default function ProviderProfileForm({
   initialSelectedSpecialtyIds: string[];
 }) {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const [savedMsg, setSavedMsg] = useState("");
+  // Once onboarding is done this is an edit screen, not step 1 of 2.
+  const isEditing = !!existingProfile && !!existingProfile.application_status && existingProfile.application_status !== "draft";
 
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -171,13 +176,15 @@ export default function ProviderProfileForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg("");
+    setSavedMsg("");
 
     if (!fullName.trim() || !title.trim() || !yearsExperience || !sessionRate) {
       setErrorMsg("Please fill in your name, title, years of experience, and session rate.");
       return;
     }
-    if (Number(sessionRate) <= 0) {
-      setErrorMsg("Session rate must be greater than 0.");
+    const rate = Number(sessionRate);
+    if (!(rate >= SESSION_PRICE_MIN && rate <= SESSION_PRICE_MAX)) {
+      setErrorMsg(`Price per session must be between ₹${SESSION_PRICE_MIN} and ₹${SESSION_PRICE_MAX.toLocaleString("en-IN")}.`);
       return;
     }
 
@@ -220,7 +227,14 @@ export default function ProviderProfileForm({
       await syncJoinTable("provider_approaches", "approach_id", selectedApproachIds);
       await syncJoinTable("provider_specialties", "specialty_id", selectedSpecialtyIds);
 
-      router.push("/provider/payout");
+      if (isEditing) {
+        setSavedMsg("Profile saved. Clients see the changes straight away.");
+        setIsSaving(false);
+        router.refresh();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        router.push("/provider/payout");
+      }
     } catch (err: any) {
       setErrorMsg(err.message || "Something went wrong while saving your profile.");
       setIsSaving(false);
@@ -229,61 +243,60 @@ export default function ProviderProfileForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-10">
-      {errorMsg && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-xl text-sm border border-red-100">{errorMsg}</div>
-      )}
+      {errorMsg && <p role="alert" className="alert alert-error">{errorMsg}</p>}
+      {savedMsg && !errorMsg && <p role="status" className="alert alert-ok">{savedMsg}</p>}
 
       <section>
         <div className="flex flex-col items-center mb-8">
           <button
             type="button"
             onClick={() => photoInputRef.current?.click()}
-            className="w-28 h-28 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden relative mb-3 border-2 border-dashed border-orange-300"
+            className="w-28 h-28 rounded-full bg-lilac flex items-center justify-center overflow-hidden relative mb-3 border-2 border-dashed border-ink-3/40"
           >
             {photoPreview ? (
               <img src={photoPreview} alt="Profile" className="w-full h-full object-cover" />
             ) : (
-              <svg className="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 text-ink-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             )}
-            <span className="absolute bottom-0 right-0 bg-emerald-700 text-white w-7 h-7 rounded-full flex items-center justify-center text-lg">+</span>
+            <span className="absolute bottom-0 right-0 bg-rose text-white w-7 h-7 rounded-full flex items-center justify-center text-lg">+</span>
           </button>
           <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoChange} className="hidden" />
-          <p className="font-semibold text-slate-800">Upload photo</p>
-          <p className="text-xs text-slate-400">JPG, PNG up to 5MB</p>
+          <p className="font-semibold text-ink">Upload photo</p>
+          <p className="text-xs text-ink-3">JPG, PNG up to 5MB</p>
         </div>
 
         <div className="space-y-5">
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Full Name</label>
+            <label className="field-label">Full name</label>
             <input value={fullName} onChange={(e) => setFullName(e.target.value)} required
-              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="field" />
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Professional Title</label>
+            <label className="field-label">Professional title</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Clinical Psychologist"
-              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="field" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Years of Experience</label>
+              <label className="field-label">Years of experience</label>
               <input type="number" min={0} value={yearsExperience} onChange={(e) => setYearsExperience(e.target.value)} required
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="field" />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Session Rate (₹ per session)</label>
-              <input type="number" min={1} value={sessionRate} onChange={(e) => setSessionRate(e.target.value)} required
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="field-label">Price per session (₹)</label>
+              <input type="number" min={SESSION_PRICE_MIN} max={SESSION_PRICE_MAX} step={50} placeholder={`${SESSION_PRICE_MIN}–${SESSION_PRICE_MAX}`} value={sessionRate} onChange={(e) => setSessionRate(e.target.value)} required
+                className="field" />
             </div>
           </div>
         </div>
       </section>
 
       <section>
-        <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-          <span className="text-slate-400">🌐</span> Languages Spoken
+        <h3 className="text-lg font-semibold text-ink mb-3 flex items-center gap-2">
+          Languages you speak
         </h3>
         <ChipSelector
           options={allLanguages}
@@ -294,20 +307,20 @@ export default function ProviderProfileForm({
 
       <section className="space-y-5">
         <div>
-          <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">License / Registration Number</label>
+          <label className="field-label">Licence or registration number</label>
           <input value={licenseNo} onChange={(e) => setLicenseNo(e.target.value)}
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="field" />
         </div>
         <div>
-          <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Education / Credentials</label>
+          <label className="field-label">Education and credentials</label>
           <input value={educationCredentials} onChange={(e) => setEducationCredentials(e.target.value)}
             placeholder="Separate multiple with commas, e.g. MSc Psychology, RCI Licensed"
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="field" />
         </div>
       </section>
 
       <section>
-        <h3 className="text-sm font-bold text-slate-800 mb-3">Client Age Group Served</h3>
+        <h3 className="text-lg font-semibold text-ink mb-3">Age groups you work with</h3>
         <div className="flex flex-wrap gap-2">
           {AGE_GROUPS.map((group) => {
             const isSelected = selectedAgeGroups.has(group.value);
@@ -316,10 +329,10 @@ export default function ProviderProfileForm({
                 type="button"
                 key={group.value}
                 onClick={() => toggleSet(selectedAgeGroups, group.value, setSelectedAgeGroups)}
-                className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-full border text-sm font-semibold transition-colors ${
                   isSelected
-                    ? "bg-emerald-50 border-emerald-600 text-emerald-800"
-                    : "bg-white border-slate-300 text-slate-600 hover:border-slate-400"
+                    ? "bg-brand border-ink text-white"
+                    : "bg-mist border-transparent text-ink-2 hover:bg-mist-2"
                 }`}
               >
                 {isSelected && <span className="mr-1.5">✓</span>}
@@ -332,32 +345,32 @@ export default function ProviderProfileForm({
 
       <section className="space-y-5">
         <div>
-          <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Tell Us About Yourself</label>
+          <label className="field-label">About you</label>
           <textarea
             value={bio}
             maxLength={250}
             onChange={(e) => setBio(e.target.value)}
             rows={4}
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="field"
           />
-          <p className="text-xs text-slate-400 text-right mt-1">{bio.length}/250</p>
+          <p className="text-xs text-ink-3 text-right mt-1">{bio.length}/250</p>
         </div>
         <div>
-          <label className="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Your Approach</label>
+          <label className="field-label">Your approach, in one line</label>
           <textarea
             value={approachStatement}
             maxLength={120}
             onChange={(e) => setApproachStatement(e.target.value)}
             rows={3}
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="field"
           />
-          <p className="text-xs text-slate-400 text-right mt-1">{approachStatement.length}/120</p>
+          <p className="text-xs text-ink-3 text-right mt-1">{approachStatement.length}/120</p>
         </div>
       </section>
 
       <section>
-        <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-          <span className="text-slate-400">🌿</span> Therapeutic Approach (select all that apply)
+        <h3 className="text-lg font-semibold text-ink mb-3 flex items-center gap-2">
+          Therapeutic approaches
         </h3>
         <ChipSelector
           options={allApproaches}
@@ -367,8 +380,8 @@ export default function ProviderProfileForm({
       </section>
 
       <section>
-        <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-          <span className="text-yellow-500">★</span> Specialties (select all that apply)
+        <h3 className="text-lg font-semibold text-ink mb-3 flex items-center gap-2">
+          What you help with
         </h3>
         <ChipSelector
           options={allSpecialties}
@@ -378,15 +391,15 @@ export default function ProviderProfileForm({
       </section>
 
       <section>
-        <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-ink mb-3 flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-          Video Intro (optional)
+          Video introduction (optional)
         </h3>
-        <p className="text-xs text-slate-400 mb-3">A short intro helps clients connect with you.</p>
+        <p className="text-xs text-ink-3 mb-3">A short intro helps clients connect with you.</p>
         <button
           type="button"
           onClick={() => videoInputRef.current?.click()}
-          className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 hover:border-slate-400"
+          className="flex items-center gap-2 px-4 py-2.5 border border-line rounded-xl text-sm font-semibold text-ink-2 hover:border-slate-400"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
           {videoName || "Record / Upload video"}
@@ -397,9 +410,9 @@ export default function ProviderProfileForm({
       <button
         type="submit"
         disabled={isSaving}
-        className="w-full bg-[#1E1B4B] text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-colors disabled:opacity-50"
+        className="btn btn-primary w-full"
       >
-        {isSaving ? "Saving…" : "Continue"}
+        {isSaving ? "Saving…" : isEditing ? "Save changes" : "Save and continue"}
       </button>
     </form>
   );

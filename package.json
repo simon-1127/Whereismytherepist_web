@@ -23,11 +23,14 @@
   "dependencies": {
     "@daily-co/daily-js": "^0.92.2",
     "@daily-co/daily-react": "^0.26.0",
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/figtree": "^5.3.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "next": "^16.3.1",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "vanilla-tilt": "^1.8.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
@@ -40,4 +43,3 @@
     "typescript": "^7.0.2"
   }
 }
- 

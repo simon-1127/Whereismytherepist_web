@@ -1,30 +1,31 @@
 import PageHeader from "../../components/PageHeader";
 import Footer from "../../components/Footer";
-import Reveal from "../../components/Reveal";
+import Icon from "../../components/icons/Icon";
 
 export const metadata = {
-  title: "About Us",
-  description: "Building mental healthcare that actually works for India.",
+  title: 'About Us: Affordable Mental Healthcare for India',
+  description: "Where's My Therapist makes therapy affordable, easy to find and available in 10 Indian languages. Meet the team and why we started.",
+  alternates: { canonical: '/about' },
 };
 
-const VALUES = [
+const VALUES: { icon: "rupee" | "beaker" | "heart" | "shield-check"; title: string; desc: string }[] = [
   {
-    icon: "🤝",
+    icon: "rupee",
     title: "Equity First",
     desc: "We price for actual Indian incomes. We support 10 languages. We accept UPI, not just credit cards. There's no \"economy tier\" where you get less care — everyone gets the same clinical rigor.",
   },
   {
-    icon: "🔬",
+    icon: "beaker",
     title: "Evidence-Backed",
     desc: "Our AI is trained on CBT, DBT, and ACT. Our therapists are licensed. Our features are designed with clinical input, not marketing noise. We measure outcomes because mental health is serious.",
   },
   {
-    icon: "🌱",
+    icon: "heart",
     title: "Destigmatizing",
     desc: "Mental illness is an illness. Full stop. We talk about it like we talk about diabetes. We build tools that normalize therapy. And we never, ever judge someone for getting help.",
   },
   {
-    icon: "🛡️",
+    icon: "shield-check",
     title: "Privacy Sacred",
     desc: "Your mental health data is the most sensitive data about you. We encrypt it, we never sell it, and we comply with applicable Indian privacy law. Full stop.",
   },
@@ -32,117 +33,113 @@ const VALUES = [
 
 const IMPACT_STATS = [
   { value: "10", label: "Indian Languages", sub: "Full UI and provider support" },
-  { value: "₹0", label: "Starting Price", sub: "Free tier for basic mental health" },
+  { value: "3 weeks", label: "Free Trial", sub: "Full Starter plan before you pay" },
   { value: "13", label: "Unique Features", sub: "More than any competitor in India" },
 ];
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 flex flex-col">
+    <>
       <PageHeader
-        title="Building mental healthcare that"
-        highlight="actually works for India"
-        description="We're a team of therapists, engineers, and advocates who believe mental health shouldn't be a luxury — it should be accessible, affordable, and in your language."
+        title="Building mental healthcare that actually works for India"
+        description="We're therapists, engineers and advocates who think mental health support should be affordable, easy to find and available in your language."
       />
 
-      {/* Mission */}
-      <Reveal className="max-w-4xl mx-auto px-5 md:px-8 py-14 md:py-16 w-full">
-        <h2 className="text-2xl md:text-3xl font-extrabold text-[#1E1B4B] mb-6">Our Mission</h2>
-        <div className="space-y-4 text-slate-600 leading-relaxed">
-          <p>
-            197 million Indians need mental healthcare. 48 million get it. Of those, most have to pay
-            out-of-pocket because insurance barely covers it. And almost all of it is in English — a
-            language only 10% of India speaks fluently at home.
-          </p>
-          <p>
-            We exist to fix this. We built an all-in-one platform where you get an AI companion you name
-            yourself (there 24/7), a licensed therapist (for real clinical care), and a community that gets
-            it — all in 10 Indian languages, paid with the payment methods you already use, at prices that
-            don't require you to earn a Silicon Valley salary.
-          </p>
-          <p className="font-semibold text-[#1E1B4B] pt-2">
-            Every feature we build. Every decision we make. Starts with one question: "Would an Indian
-            family earning ₹20,000/month be able to afford this?"
-          </p>
-        </div>
-      </Reveal>
+      <main className="shell space-y-16 py-16 md:space-y-24 md:py-24">
+        <section data-reveal className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+          <h2 className="text-4xl font-bold md:text-5xl">Why we exist</h2>
+          <div className="space-y-5 text-lg leading-relaxed text-ink-2">
+            <p>
+              197 million Indians need mental healthcare. 48 million get it. Most pay out of pocket because insurance barely covers
+              it, and almost all of it happens in English, a language only about 10% of India speaks fluently at home.
+            </p>
+            <p>
+              So we built one place with an AI companion you name yourself, licensed therapists for real clinical care, and a
+              community that understands, in 10 Indian languages, paid for the way you already pay, at prices that fit Indian
+              salaries.
+            </p>
+            <p className="border-l-4 border-rose pl-5 font-display text-2xl font-medium leading-snug text-ink">
+              Every decision starts with one question: could a family earning ₹20,000 a month afford this?
+            </p>
+          </div>
+        </section>
 
-      {/* Values */}
-      <Reveal className="bg-white border-y border-slate-200 py-14 md:py-16 w-full">
-        <div className="max-w-6xl mx-auto px-5 md:px-8">
-          <h2 className="text-2xl md:text-3xl font-extrabold text-[#1E1B4B] mb-10">Our Values</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <section>
+          <h2 className="text-4xl font-bold md:text-5xl">What we hold ourselves to</h2>
+          <ul data-reveal-group className="mt-10 grid gap-4 md:grid-cols-2">
             {VALUES.map((v) => (
-              <div key={v.title} className="group flex gap-4 p-6 rounded-2xl border border-slate-100 bg-[#F8FAFC] transition-all duration-300 hover:bg-white hover:border-indigo-100 hover:shadow-lg hover:-translate-y-0.5">
-                <div className="text-3xl shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">{v.icon}</div>
+              <li key={v.title} className="flex gap-5 card p-7">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-lilac">
+                  <Icon name={v.icon} className="h-6 w-6" />
+                </span>
                 <div>
-                  <p className="font-bold text-[#1E1B4B] mb-1.5">{v.title}</p>
-                  <p className="text-sm text-slate-600 leading-relaxed">{v.desc}</p>
+                  <h3 className="text-2xl font-semibold">{v.title}</h3>
+                  <p className="mt-2 text-ink-2">{v.desc}</p>
                 </div>
-              </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-4xl font-bold md:text-5xl">The people building it</h2>
+          <div className="mt-10 grid gap-6 lg:grid-cols-2">
+            {TEAM.map((m) => (
+              <article key={m.name} data-reveal className="sheet p-6 md:p-8">
+                {/* Same fixed frame for every photo, whatever the bio length */}
+                <div className="flex items-center gap-5">
+                  <div className="h-[168px] w-[136px] shrink-0 overflow-hidden rounded-[20px] bg-brand-soft ring-4 ring-white shadow-[var(--shadow-lift)] sm:h-[200px] sm:w-[160px]">
+                    <img src={m.photo} alt={m.name} className="h-full w-full object-cover object-top" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold md:text-3xl">{m.name}</h3>
+                    <p className="mt-1 font-semibold text-brand-violet">{m.role}</p>
+                  </div>
+                </div>
+                <div className="mt-6 space-y-3 text-[15px] leading-relaxed text-ink-2">
+                  {m.bio.map((para, i) => <p key={i}>{para}</p>)}
+                </div>
+              </article>
             ))}
           </div>
-        </div>
-      </Reveal>
+        </section>
 
-      {/* Team */}
-      <Reveal className="py-14 md:py-16 w-full">
-        <div className="max-w-5xl mx-auto px-5 md:px-8">
-          <h2 className="text-2xl md:text-3xl font-extrabold text-[#1E1B4B] text-center mb-10">Meet the Team</h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            <div className="group bg-white border border-slate-200 rounded-3xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-indigo-100">
-              <div className="aspect-[4/5] w-full overflow-hidden bg-slate-100">
-                <img src="/founder.jpeg" alt="Chitranshu Simon" className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105" />
-              </div>
-              <div className="p-6 md:p-8">
-                <p className="font-bold text-lg text-[#1E1B4B] text-center">Chitranshu Simon</p>
-                <p className="text-sm text-indigo-600 font-semibold text-center mb-5">Founder & CEO</p>
-                <div className="text-sm text-slate-600 leading-relaxed space-y-3">
-                  <p>I didn't start Where's My Therapist because I saw a business opportunity. I started it because I was looking for help myself.</p>
-                  <p>During one of the most difficult periods of my life, I knew I needed therapy. Taking that first step was already hard — but finding the right therapist felt even harder. I spent hours searching through websites, comparing profiles, reading reviews, and trying to understand who would actually be the right fit. Then came another reality check: the cost. Many therapy sessions were priced far beyond what I could comfortably afford. And I kept wondering how many people, just like me, give up — not because they don't want help, but because they can't find someone they trust within their budget.</p>
-                  <p>That's when one question changed everything: "Why is getting mental health support so complicated when it's needed the most?"</p>
-                  <p>The more I spoke with friends and others, the more I realized my experience wasn't unique. So many people were struggling to find the right therapist, compare prices, understand specialties, and book with confidence. That's why I built Where's My Therapist — not just another therapist directory, but a platform designed around the people seeking help. Our mission is to make therapy more accessible, transparent, and affordable by helping you find therapists based on your unique needs (not just location), compare pricing upfront with no hidden surprises, and spend less time searching and more time healing.</p>
-                  <p>Everyone deserves access to quality mental healthcare, regardless of their financial situation. If Where's My Therapist can help even one person avoid the confusion, stress, and financial uncertainty that I experienced, then this journey will have been worth it.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="group bg-white border border-slate-200 rounded-3xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-indigo-100">
-              <div className="aspect-[4/5] w-full overflow-hidden bg-slate-100">
-                <img src="/techlead.png" alt="Pushpesh Upreti" className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105" />
-              </div>
-              <div className="p-6 md:p-8">
-                <p className="font-bold text-lg text-[#1E1B4B] text-center">Pushpesh Upreti</p>
-                <p className="text-sm text-indigo-600 font-semibold text-center mb-5">Tech Lead & Manager</p>
-                <div className="text-sm text-slate-600 leading-relaxed space-y-3">
-                  <p>Pushpesh is the architect behind everything you see and experience on Where's My Therapist. As Tech Lead and Manager, he bridges the gap between a deeply human mission and the technology that makes it possible — ensuring that every click, every search, and every booking feels effortless for someone who is already going through enough.</p>
-                  <p>When the founder shared the vision of making mental healthcare accessible to every Indian, Pushpesh didn't just see a product to build — he saw a problem worth solving. He understood that even the best idea means nothing if the platform is slow, confusing, or out of reach. So he set out to build something different: a platform that works as hard as the people using it.</p>
-                  <p>From architecting the backend infrastructure to managing the team that brings it all together, Pushpesh ensures that Where's My Therapist delivers on its promise — not just in words, but in every line of code. He believes that in a country of 1.4 billion people, where 197 million need mental health support, technology isn't optional. It's the only way to scale compassion.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Reveal>
-
-      {/* Impact */}
-      <Reveal className="bg-white border-t border-slate-200 py-14 md:py-16 w-full">
-        <div className="max-w-5xl mx-auto px-5 md:px-8">
-          <h2 className="text-2xl md:text-3xl font-extrabold text-[#1E1B4B] mb-10">Our Impact (by launch)</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {IMPACT_STATS.map((stat) => (
-              <div key={stat.label} className="text-center bg-gradient-to-b from-[#F8FAFC] to-indigo-50/60 border border-slate-100 rounded-2xl py-8 px-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 hover:border-indigo-200">
-                <p className="text-4xl font-extrabold bg-gradient-to-r from-blue-700 to-pink-500 bg-clip-text text-transparent mb-2">{stat.value}</p>
-                <p className="font-semibold text-[#1E1B4B] text-sm mb-1">{stat.label}</p>
-                <p className="text-xs text-slate-500">{stat.sub}</p>
+        <section data-reveal className="rounded-[var(--radius-sheet)] bg-brand p-8 text-white md:p-12">
+          <h2 className="text-3xl font-bold md:text-4xl">At launch</h2>
+          <dl className="mt-8 grid gap-8 sm:grid-cols-3">
+            {IMPACT_STATS.map((s) => (
+              <div key={s.label}>
+                <dd className="font-display text-6xl font-bold leading-none">{s.value}</dd>
+                <dt className="mt-3 text-lg font-semibold">{s.label}</dt>
+                <dd className="text-white/60">{s.sub}</dd>
               </div>
             ))}
-          </div>
-        </div>
-      </Reveal>
-
+          </dl>
+        </section>
+      </main>
       <Footer />
-    </div>
+    </>
   );
 }
+
+const TEAM = [
+  {
+    name: "Chitranshu Simon",
+    role: "Founder and CEO",
+    photo: "/founder.jpeg",
+    bio: [
+      "I didn't start Where's My Therapist because I saw a business opportunity. I started it because I was looking for help myself.",
+      "During one of the hardest periods of my life, I knew I needed therapy. Taking that first step was hard, and finding the right therapist was harder: hours comparing profiles, reading reviews, trying to work out who would actually fit. Then came the cost. Many sessions were priced far beyond what I could afford, and I kept wondering how many people give up, not because they don't want help, but because they can't find someone they trust within their budget.",
+      "So I built a platform around the people looking for help: find therapists by what you need, not just location, see prices upfront, and spend less time searching and more time healing. If it saves even one person the confusion and stress I went through, it's worth it.",
+    ],
+  },
+  {
+    name: "Pushpesh Upreti",
+    role: "Tech lead and manager",
+    photo: "/techlead.png",
+    bio: [
+      "Pushpesh is the architect behind everything you see on Where's My Therapist. He bridges a deeply human mission and the technology that makes it possible, so every search and booking feels effortless for someone who's already going through enough.",
+      "From the backend infrastructure to the team that builds on it, he makes sure the platform keeps its promise in every line of code. In a country of 1.4 billion people, where 197 million need mental health support, he believes technology is the only way to scale compassion.",
+    ],
+  },
+];

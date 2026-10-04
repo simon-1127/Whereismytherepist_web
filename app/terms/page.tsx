@@ -3,25 +3,26 @@ import Footer from "../../components/Footer";
 import { LegalSection, LegalPart, LegalList, TocLink } from "../../components/legal/LegalBits";
 
 export const metadata = {
-  title: "Terms of Use",
-  description: "The terms governing your access to and use of Where's My Therapist.",
+  title: 'Terms of Use and Medical & AI Disclaimer',
+  description: "The terms governing your use of Where's My Therapist, including our medical and AI disclaimer.",
+  alternates: { canonical: '/terms' },
 };
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 flex flex-col">
+    <div className="flex flex-1 flex-col">
       <PageHeader
         title="Terms of"
         highlight="Use"
         description="Last updated 14 September 2026. Please read this alongside our Medical & AI Disclaimer below before using the Services."
       />
 
-      <div className="max-w-6xl mx-auto px-5 md:px-8 py-12 w-full flex-grow grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-10">
+      <div className="shell grid w-full flex-grow grid-cols-1 gap-10 py-12 lg:grid-cols-[260px_1fr]">
         <aside className="hidden lg:block">
-          <div className="sticky top-6 bg-white border border-slate-200 rounded-2xl p-5 max-h-[80vh] overflow-y-auto">
-            <p className="text-xs font-bold uppercase tracking-wide text-red-500 mb-3">⚠ Read First</p>
+          <div className="card sticky top-28 max-h-[75vh] overflow-y-auto p-5">
+            <p className="mb-3 text-sm font-semibold text-rose">Read this first</p>
             <TocLink href="#disclaimer">Medical & AI Disclaimer</TocLink>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mt-5 mb-3">Terms of Use</p>
+            <p className="text-sm font-semibold text-ink-3 mt-5 mb-3">Terms of Use</p>
             <TocLink href="#terms-1">1. About WMT</TocLink>
             <TocLink href="#terms-2">2. Eligibility</TocLink>
             <TocLink href="#terms-3">3. Account</TocLink>
@@ -48,20 +49,20 @@ export default function TermsPage() {
           </div>
         </aside>
 
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-10">
+        <div className="sheet p-6 md:p-12">
 
           {/* MEDICAL & AI DISCLAIMER — prominent, first thing on the page */}
-          <div id="disclaimer" className="scroll-mt-28 mb-14 bg-red-50 border-2 border-red-200 rounded-2xl p-6 md:p-8">
+          <div id="disclaimer" className="scroll-mt-28 mb-14 bg-rose-soft rounded-[var(--radius-card)] p-6 md:p-8">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-2xl">⚠️</span>
-              <h2 className="text-xl font-extrabold text-red-800">Medical & AI Disclaimer</h2>
+              
+              <h2 className="text-xl font-bold text-rose-deep">Medical & AI Disclaimer</h2>
             </div>
-            <p className="text-xs text-red-600 mb-6">Last Updated: 14 September 2026 — please read this carefully before using the Services.</p>
-            <p className="text-sm text-red-900 mb-6">
+            <p className="text-xs text-rose-deep/80 mb-6">Last Updated: 14 September 2026 — please read this carefully before using the Services.</p>
+            <p className="text-sm text-ink mb-6">
               Where's My Therapist ("WMT") provides technology-enabled mental-health and wellness services.
             </p>
 
-            <div className="space-y-6 text-sm text-red-900 leading-relaxed">
+            <div className="space-y-6 text-sm text-ink leading-relaxed">
               <div>
                 <p className="font-bold mb-1.5">1. Not an Emergency Service</p>
                 <p>WMT is not an emergency response service. If you or another person is experiencing an immediate medical or mental-health emergency, serious risk of harm, suicidal thoughts with immediate danger, or another life-threatening situation, do not rely solely on WMT. Contact your local emergency service, go to the nearest emergency department, or seek immediate in-person professional assistance. In India, you can also reach <a href="tel:14416" className="underline font-semibold">Tele MANAS at 14416</a> or the <a href="tel:18005990019" className="underline font-semibold">KIRAN helpline at 1800-599-0019</a>, both toll-free and available 24/7.</p>
@@ -176,6 +177,14 @@ export default function TermsPage() {
               <p>Fees for paid Services will be displayed before purchase where reasonably practicable. Prices may vary by:</p>
               <LegalList items={["Provider", "Service", "Session duration", "Location", "Program", "Subscription", "Other applicable factors"]} />
               <p>Payments may be processed by third-party payment providers. Refunds and cancellations are subject to the applicable cancellation and refund policy displayed at the time of purchase.</p>
+              <p><strong>Free trial and auto-renewal.</strong> New app accounts get a 21-day free trial of the Starter plan. To start the trial you may be asked to set up a recurring payment mandate (UPI AutoPay or a card or bank e-mandate) through our payment partner. You will not be charged during the trial. Unless you cancel before the trial ends, your chosen plan (Starter at ₹299 per month or Growth at ₹799 per month, or the yearly price shown at signup) begins on day 22 and renews automatically each billing period until you cancel.</p>
+              <LegalList items={[
+                "We remind you by email and in the app at least 3 days before the trial ends.",
+                "Your bank or UPI app sends a pre-debit notification at least 24 hours before each charge, as required by the Reserve Bank of India.",
+                "You can cancel any time from Settings in the app, from your UPI app's AutoPay section, or by writing to support@wheresmytherapist.com. Cancelling stops future charges; you keep access until the end of the period already paid for.",
+                "Charges already made for a billing period are not refunded except where required by law or where you were charged in error.",
+                "If a price changes, we tell you at least 30 days in advance and the change applies from your next billing period.",
+              ]} />
             </LegalSection>
 
             <LegalSection id="terms-13" title="13. App Store Terms">
@@ -226,8 +235,8 @@ export default function TermsPage() {
 
             <LegalSection id="terms-23" title="23. Contact">
               <p>Where's My Therapist</p>
-              <p>Email: <a href="mailto:chitranshu@wheresmytherapist.com" className="text-indigo-600 underline">chitranshu@wheresmytherapist.com</a></p>
-              <p>Website: <a href="https://wheresmytherapist.com/" className="text-indigo-600 underline">https://wheresmytherapist.com/</a></p>
+              <p>Email: <a href="mailto:chitranshu@wheresmytherapist.com" className="text-rose underline">chitranshu@wheresmytherapist.com</a></p>
+              <p>Website: <a href="https://wheresmytherapist.com/" className="text-rose underline">https://wheresmytherapist.com/</a></p>
             </LegalSection>
           </LegalPart>
         </div>

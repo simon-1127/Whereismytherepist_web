@@ -2,39 +2,34 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 
-const SORT_OPTIONS = [
-  { value: "relevance", label: "Relevance" },
-  { value: "price_asc", label: "Price: Low to High" },
-  { value: "price_desc", label: "Price: High to Low" },
-  { value: "rating", label: "Rating" },
+const OPTIONS = [
+  { value: "relevance", label: "Most reviewed" },
+  { value: "rating", label: "Highest rated" },
+  { value: "price_asc", label: "Price, low to high" },
+  { value: "price_desc", label: "Price, high to low" },
 ];
 
 export default function SortDropdown() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const currentSort = searchParams.get("sort") || "relevance";
-
-  function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (e.target.value === "relevance") {
-      params.delete("sort");
-    } else {
-      params.set("sort", e.target.value);
-    }
-    router.push(`?${params.toString()}`, { scroll: false });
-  }
+  const params = useSearchParams();
+  const current = params.get("sort") || "relevance";
 
   return (
-    <select
-      value={currentSort}
-      onChange={handleChange}
-      className="text-sm font-semibold text-[#1E1B4B] bg-white border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-    >
-      {SORT_OPTIONS.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          Sort: {opt.label}
-        </option>
-      ))}
-    </select>
+    <label className="flex items-center gap-2 text-sm">
+      <span className="text-ink-3">Sort by</span>
+      <select
+        value={current}
+        onChange={(e) => {
+          const next = new URLSearchParams(params.toString());
+          e.target.value === "relevance" ? next.delete("sort") : next.set("sort", e.target.value);
+          router.replace(`/therapists${next.toString() ? `?${next}` : ""}`, { scroll: false });
+        }}
+        className="rounded-full border border-line bg-paper py-2 pl-4 pr-8 font-semibold text-ink focus:border-ink focus:outline-none"
+      >
+        {OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </label>
   );
 }

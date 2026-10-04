@@ -3,67 +3,37 @@ import PageHeader from "../../components/PageHeader";
 import Footer from "../../components/Footer";
 
 export const metadata = {
-  title: "Sitemap",
-  description: "All pages on Where's My Therapist.",
+  title: 'Sitemap',
+  description: "Every page on Where's My Therapist.",
+  alternates: { canonical: '/sitemap' },
 };
 
 const SECTIONS = [
-  {
-    title: "Explore",
-    links: [
-      { href: "/", label: "Home" },
-      { href: "/therapists", label: "Find a Therapist" },
-    ],
-  },
-  {
-    title: "Account",
-    links: [
-      { href: "/login", label: "Sign In / Sign Up" },
-      { href: "/profile", label: "My Profile (client)" },
-      { href: "/sessions", label: "My Bookings (client)" },
-      { href: "/provider/dashboard", label: "Provider Dashboard" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { href: "/about", label: "About Us" },
-      { href: "/careers", label: "Careers" },
-      { href: "/contact", label: "Contact" },
-    ],
-  },
-  {
-    title: "Legal",
-    links: [
-      { href: "/privacy", label: "Privacy Policy" },
-      { href: "/terms", label: "Terms of Use (incl. Medical & AI Disclaimer)" },
-    ],
-  },
+  { title: "Explore", links: [["/", "Home"], ["/therapists", "Find a therapist"], ["/quiz", "Free self-check quizzes"]] },
+  { title: "Your account", links: [["/login", "Sign in or create an account"], ["/profile", "Your profile"], ["/sessions", "My sessions"], ["/provider/dashboard", "Therapist dashboard"]] },
+  { title: "Company", links: [["/about", "About us"], ["/careers", "Careers"], ["/contact", "Contact"], ["/for-therapists", "Join as a therapist"]] },
+  { title: "Legal", links: [["/privacy", "Privacy policy"], ["/terms", "Terms of use, including the medical and AI disclaimer"]] },
 ];
 
 export default function SitemapPage() {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 flex flex-col">
-      <PageHeader title="Site" highlight="Map" description="Every page on Where's My Therapist, in one place." />
-
-      <section className="max-w-4xl mx-auto px-5 md:px-8 py-14 w-full flex-grow">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-          {SECTIONS.map((section) => (
-            <div key={section.title} className="bg-white border border-slate-200 rounded-2xl p-6">
-              <h2 className="font-bold text-[#1E1B4B] mb-4">{section.title}</h2>
-              <div className="flex flex-col gap-2.5">
-                {section.links.map((link) => (
-                  <Link key={link.href} href={link.href} className="text-sm text-indigo-600 hover:underline">
-                    {link.label}
-                  </Link>
+    <>
+      <PageHeader title="Sitemap" description="Every page on Where's My Therapist." />
+      <main className="shell py-16">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          {SECTIONS.map((s) => (
+            <section key={s.title} className="border-t-2 border-ink pt-5">
+              <h2 className="text-xl font-semibold">{s.title}</h2>
+              <ul className="mt-4 space-y-2.5">
+                {s.links.map(([href, label]) => (
+                  <li key={href}><Link href={href} className="link">{label}</Link></li>
                 ))}
-              </div>
-            </div>
+              </ul>
+            </section>
           ))}
         </div>
-      </section>
-
+      </main>
       <Footer />
-    </div>
+    </>
   );
 }

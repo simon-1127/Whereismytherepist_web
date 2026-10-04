@@ -1,40 +1,41 @@
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase/server";
-import { createRazorpayOrder } from "../../../../lib/razorpay";
+import { createAdminClient } from "../../../../lib/supabase/admin";
+import { createRazorpayOrder, razorpayKeyId } from "../../../../lib/razorpay";
+import { BOOKING_ENV, missingEnv } from "../../../../lib/env";
 
 export async function POST(request: Request) {
+  // Check config BEFORE holding a slot or taking money. Previously a missing
+  // SUPABASE_SERVICE_ROLE_KEY only surfaced in /verify — after the client
+  // had already paid.
+  const missing = missingEnv(BOOKING_ENV);
+  if (missing.length) {
+    console.error("Booking disabled, missing env:", missing.join(", "));
+    return NextResponse.json(
+      { error: "Booking is temporarily unavailable. Please try again shortly or contact support." },
+      { status: 503 }
+    );
+  }
+
+  let sessionId: string | null = null;
   try {
     const { slotId } = await request.json();
+    if (!slotId) return NextResponse.json({ error: "Pick a time slot first." }, { status: 400 });
 
-    if (!slotId) {
-      return NextResponse.json({ error: "slotId is required" }, { status: 400 });
-    }
-
-    // Uses the logged-in user's own session (cookies), so auth.uid() inside
-    // the create_booking_hold() Postgres function correctly identifies them.
     const supabase = await createClient();
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Sign in to book a session." }, { status: 401 });
 
-    if (!user) {
-      return NextResponse.json({ error: "You must be signed in to book a session" }, { status: 401 });
-    }
-
-    // Fast-fail with a clear message; the real enforcement is inside
-    // create_booking_hold() itself (see sql/003), which can't be bypassed
-    // by calling the RPC directly.
     const { data: userRow } = await supabase.from("users").select("role").eq("id", user.id).single();
     if (userRow?.role !== "client") {
-      return NextResponse.json({ error: "Only client accounts can book sessions" }, { status: 403 });
+      return NextResponse.json({ error: "Only client accounts can book sessions." }, { status: 403 });
     }
 
-    // Best-effort cleanup of any of this provider's stale holds before we try
-    // to grab this slot. Safe to skip if it errors — the RPC self-heals too.
     try {
-  await supabase.rpc("release_expired_holds");
-} catch {}
+      await supabase.rpc("release_expired_holds");
+    } catch {}
 
     const { data: holdResult, error: holdError } = await supabase
       .rpc("create_booking_hold", { p_slot_id: slotId })
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
 
     if (holdError || !holdResult) {
       return NextResponse.json(
-        { error: holdError?.message || "Could not hold this slot" },
+        { error: holdError?.message || "That slot was just taken. Pick another time." },
         { status: 409 }
       );
     }
@@ -55,14 +56,14 @@ export async function POST(request: Request) {
       scheduled_start: string;
       scheduled_end: string;
     };
+    sessionId = result.session_id;
 
     const order = await createRazorpayOrder({
-      // result.amount is already in paise (matches provider_profiles.base_session_rate),
-      // which is also the unit Razorpay's API expects — no conversion needed here.
       amountInPaise: result.amount,
       currency: result.currency,
-      receipt: result.session_id,
+      receipt: result.session_id, // reconcile finds orders by this
       notes: {
+        type: "session",
         session_id: result.session_id,
         client_id: user.id,
         provider_id: result.provider_id,
@@ -74,12 +75,33 @@ export async function POST(request: Request) {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      scheduledStart: result.scheduled_start,
-      scheduledEnd: result.scheduled_end,
-      razorpayKeyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      razorpayKeyId: razorpayKeyId(),
     });
   } catch (err: any) {
     console.error("create-order error:", err);
-    return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
+    // Razorpay order failed after the slot was held — release it, same as
+    // the app backend does, instead of locking the slot for 15 minutes.
+    if (sessionId) await rollback(sessionId).catch(() => undefined);
+    return NextResponse.json({ error: "Could not start the payment. Please try again." }, { status: 500 });
+  }
+}
+
+async function rollback(sessionId: string) {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("sessions")
+    .select("slot_id")
+    .eq("id", sessionId)
+    .eq("status", "pending_payment")
+    .maybeSingle();
+  if (!data) return;
+  await admin.from("payments").delete().eq("session_id", sessionId);
+  await admin.from("sessions").delete().eq("id", sessionId).eq("status", "pending_payment");
+  if (data.slot_id) {
+    await admin
+      .from("availability_slots")
+      .update({ status: "open", held_by_client_id: null, held_until: null })
+      .eq("id", data.slot_id)
+      .eq("status", "held");
   }
 }

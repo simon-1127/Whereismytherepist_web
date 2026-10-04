@@ -1,17 +1,16 @@
-import { createClient } from "../../../lib/supabase/server";
-import { redirect } from "next/navigation";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "../../../lib/supabase/server";
 
-export const revalidate = 0;
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Payouts" };
 
 export default async function ProviderPayoutPage() {
   const supabase = await createClient();
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?next=/provider/payout");
 
   const { data: userRow } = await supabase.from("users").select("role").eq("id", user.id).single();
   if (userRow?.role !== "provider") redirect("/");
@@ -21,46 +20,43 @@ export default async function ProviderPayoutPage() {
     .select("application_status, kyc_status")
     .eq("user_id", user.id)
     .maybeSingle();
-
   if (!profile) redirect("/provider/profile");
 
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-800 flex flex-col">
-      <div className="max-w-lg mx-auto px-5 md:px-8 py-10 w-full flex-grow">
-        <div className="flex items-center gap-2 mb-8">
-          <span className="w-7 h-7 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center">✓</span>
-          <div className="h-px bg-slate-300 flex-1" />
-          <span className="w-7 h-7 rounded-full bg-[#1E1B4B] text-white text-xs flex items-center justify-center font-bold">2</span>
-        </div>
-
-        <h1 className="text-2xl font-extrabold text-[#1E1B4B] mb-2">Get paid for your sessions</h1>
-        <p className="text-sm text-slate-500 mb-6">
-          We verify your identity and bank account before your profile goes live. This is also where your
-          session earnings are paid out.
+    <main className="shell py-10 md:py-14">
+      <div className="mx-auto max-w-2xl">
+        <ol className="mb-6 flex items-center gap-3 text-sm font-semibold" aria-label="Setup progress">
+          <li className="flex items-center gap-2 text-ink-3"><span className="grid h-7 w-7 place-items-center rounded-full bg-teal text-white">✓</span> Your profile</li>
+          <li aria-hidden className="h-px flex-1 bg-line" />
+          <li className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-full bg-brand text-white">2</span> Payouts</li>
+        </ol>
+        <h1 className="text-[2.4rem] font-bold md:text-5xl">Get paid for your sessions</h1>
+        <p className="mt-3 text-lg text-ink-2">
+          We verify your identity and bank account before your profile goes live. Your session earnings are paid to that account.
         </p>
 
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6">
-          <p className="font-bold text-amber-800 mb-1.5">Payout setup coming soon</p>
-          <p className="text-sm text-amber-700">
-            Bank/KYC verification on the web isn't wired up to Razorpay yet — that's a separate
-            integration (Razorpay Route/X) from the booking payments flow. For now, your profile
-            info from step 1 is saved and live. Reach out to support to complete payout setup
-            manually in the meantime.
-          </p>
+        <div className="sheet mt-8 space-y-5 p-6 md:p-8">
+          <div className="alert alert-warn">
+            <p className="font-semibold">Bank verification happens in the app for now.</p>
+            <p className="mt-1">
+              Open the Where&rsquo;s My Therapist app, go to Earnings and add your bank details there, or ask{" "}
+              <a href="mailto:support@wheresmytherapist.com" className="underline">support</a> to set it up with you. Your profile
+              details are already saved.
+            </p>
+          </div>
+          <dl className="grid grid-cols-2 gap-4">
+            <div className="well p-4">
+              <dt className="text-sm text-ink-3">Profile</dt>
+              <dd className="mt-1 font-display text-lg font-semibold capitalize">{profile.application_status?.replace(/_/g, " ")}</dd>
+            </div>
+            <div className="well p-4">
+              <dt className="text-sm text-ink-3">Bank verification</dt>
+              <dd className="mt-1 font-display text-lg font-semibold capitalize">{(profile.kyc_status || "not started").replace(/_/g, " ")}</dd>
+            </div>
+          </dl>
+          <Link href="/provider/dashboard" className="btn btn-primary w-full">Go to dashboard</Link>
         </div>
-
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-8">
-          <p className="text-sm text-slate-500 mb-1">Profile status</p>
-          <p className="font-bold text-[#1E1B4B] capitalize">{profile.application_status?.replace(/_/g, " ")}</p>
-        </div>
-
-        <Link
-          href="/provider/bookings"
-          className="w-full bg-[#1E1B4B] text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-colors flex items-center justify-center"
-        >
-          Go to my dashboard
-        </Link>
       </div>
-    </div>
+    </main>
   );
 }
