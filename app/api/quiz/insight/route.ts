@@ -46,12 +46,24 @@ type Result = {
 };
 
 function clean(s: unknown, max: number) {
-  return typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "";
+  if (typeof s !== "string") return "";
+  // Strip markdown the model sometimes adds (**bold**, leading bullets, #).
+  return s.replace(/\*\*|__|^#+\s*|^[-*•]\s+/gm, "").replace(/\s+/g, " ").trim().slice(0, max);
 }
+// Tolerant of the shapes models actually return: {title, detail}, other key
+// names, or plain strings ("Title: detail").
 function cleanList(v: unknown, n: number): Insight[] {
   if (!Array.isArray(v)) return [];
   return v
-    .map((x: any) => ({ title: clean(x?.title, 90), detail: clean(x?.detail, 360) }))
+    .map((x: any) => {
+      if (typeof x === "string") {
+        const [t, ...rest] = x.split(/:\s|\s[-–—]\s/);
+        return rest.length ? { title: clean(t, 90), detail: clean(rest.join(": "), 600) } : { title: clean(x.split(/[.!?]/)[0], 90), detail: clean(x, 600) };
+      }
+      const title = x?.title ?? x?.name ?? x?.heading ?? x?.cause ?? x?.step ?? x?.label;
+      const detail = x?.detail ?? x?.details ?? x?.description ?? x?.explanation ?? x?.how ?? x?.text ?? x?.why;
+      return { title: clean(title, 90), detail: clean(detail, 600) };
+    })
     .filter((x) => x.title && x.detail)
     .slice(0, n);
 }
@@ -111,15 +123,15 @@ export async function POST(request: Request) {
     if (json.crisis === true) return NextResponse.json({ safety: true });
 
     const result: Result = {
-      summary: clean(json.summary, 600) || fallback.summary,
+      summary: clean(json.summary, 900) || fallback.summary,
       causes: cleanList(json.causes, 3),
       steps: cleanList(json.steps, 4),
-      howWeHelp: Array.isArray(json.how_we_help) ? json.how_we_help.map((s: unknown) => clean(s, 260)).filter(Boolean).slice(0, 3) : [],
-      therapistFocus: clean(json.therapist_focus, 260),
+      howWeHelp: (Array.isArray(json.how_we_help ?? json.howWeHelp) ? (json.how_we_help ?? json.howWeHelp) : []).map((s: any) => clean(typeof s === "string" ? s : s?.text ?? s?.detail ?? "", 320)).filter(Boolean).slice(0, 3),
+      therapistFocus: clean(json.therapist_focus ?? json.therapistFocus, 320),
       source: "ai",
     };
-    if (result.causes.length < 2) result.causes = fallback.causes;
-    if (result.steps.length < 2) result.steps = fallback.steps;
+    if (result.causes.length < 1) result.causes = fallback.causes;
+    if (result.steps.length < 1) result.steps = fallback.steps;
     if (!result.howWeHelp.length) result.howWeHelp = fallback.howWeHelp;
 
     return NextResponse.json({ band, flags: fl, signals: topSignals(concern, answers), result, ...debug });

@@ -1,5 +1,6 @@
 "use client";
 
+import { SESSION } from "../../lib/policy";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
@@ -43,9 +44,9 @@ export default function AvailabilityManager({ providerId, initialSlots }: { prov
   const [date, setDate] = useState(tomorrow);
   const [from, setFrom] = useState("10:00");
   const [until, setUntil] = useState("18:00");
-  const [duration, setDuration] = useState("50");
-  const [gap, setGap] = useState("10");
-
+  // Fixed format: 50-minute sessions with a 10-minute break (60-minute slots).
+  const duration = SESSION.slotMinutes; // DB requires 60-min slots (50 talk + 10 break inside)
+  const gap = 0;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
@@ -124,20 +125,16 @@ export default function AvailabilityManager({ providerId, initialSlots }: { prov
             <input id="av-until" type="time" value={until} onChange={(e) => setUntil(e.target.value)} required className="field" />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="av-len" className="field-label">Session length</label>
-            <select id="av-len" value={duration} onChange={(e) => setDuration(e.target.value)} className="field">
-              {[30, 45, 50, 60, 90].map((m) => <option key={m} value={m}>{m} min</option>)}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="av-gap" className="field-label">Break between</label>
-            <select id="av-gap" value={gap} onChange={(e) => setGap(e.target.value)} className="field">
-              {[0, 5, 10, 15, 30].map((m) => <option key={m} value={m}>{m === 0 ? "None" : `${m} min`}</option>)}
-            </select>
-          </div>
-        </div>
+        <p className="flex items-center gap-2.5 rounded-2xl bg-lilac px-4 py-3 text-sm text-ink-2">
+          <svg className="h-4 w-4 shrink-0 text-brand-violet" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" aria-hidden>
+            <circle cx="12" cy="12" r="9" />
+            <path strokeLinecap="round" d="M12 7v5l3 2" />
+          </svg>
+          <span>
+            Every session is <strong className="text-ink">{SESSION.talkMinutes} minutes</strong>, with a {SESSION.breakMinutes}-minute break before
+            the next one, so a new slot starts every hour.
+          </span>
+        </p>
 
         <div className="well p-4">
           {preview.length ? (

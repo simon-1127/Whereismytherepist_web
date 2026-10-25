@@ -1,8 +1,7 @@
 // Matches the language picker in your mobile app (screenshot: English, हिन्दी,
 // தமிழ், বাংলা, मराठी, ગુજરાતી, ಕನ್ನಡ, മലയാളം, ਪੰਜਾਬੀ, తెలుగు).
 // `code` values here are what's stored in client_profiles.ui_language /
-// preferred_language, and what subscription_tiers.allowed_language_codes
-// restricts against.
+// preferred_language. Every plan gets all of them.
 export const LANGUAGE_CODES: { code: string; label: string; native: string }[] = [
   { code: "en", label: "English", native: "English" },
   { code: "hi", label: "Hindi", native: "हिन्दी" },

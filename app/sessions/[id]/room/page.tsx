@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "../../../../lib/supabase/server";
-import { createAdminClient } from "../../../../lib/supabase/admin";
-import { canJoinSession, createDailyMeetingToken, getOrCreateSessionRoom, joinWindow } from "../../../../lib/daily";
+import { canJoinSession } from "../../../../lib/daily";
+import { callBackend } from "../../../../lib/backend";
 import VideoRoom from "../../../../components/VideoRoom";
 
 export const dynamic = "force-dynamic";
@@ -35,25 +35,22 @@ export default async function CallRoomPage({ params }: { params: Promise<{ id: s
     supabase.from("provider_profiles").select("full_name").eq("user_id", session.provider_id).maybeSingle(),
     supabase.from("client_profiles").select("full_name").eq("user_id", session.client_id).maybeSingle(),
   ]);
-  const ownName = (isProvider ? providerProfile?.full_name : clientProfile?.full_name) || (isProvider ? "Therapist" : "Client");
   const otherName = (isProvider ? clientProfile?.full_name : providerProfile?.full_name) || (isProvider ? "your client" : "your therapist");
 
-  let roomUrl: string;
-  let token: string;
-  try {
-    const room = await getOrCreateSessionRoom(createAdminClient(), session);
-    const { closesAt } = joinWindow(session.scheduled_start, session.scheduled_end);
-    token = await createDailyMeetingToken({
-      roomName: room.name,
-      userName: ownName,
-      isOwner: isProvider,
-      exp: Math.floor(closesAt / 1000),
-    });
-    roomUrl = room.url;
-  } catch (err: any) {
-    console.error("Daily room error:", err);
+  // The backend issues the room + a meeting token carrying this user's id —
+  // the same path as the app. Attendance (who joined, when, for how long) is
+  // attributed by that id; a token without it made web joiners invisible,
+  // so a present person was recorded as absent. It also logs the join
+  // attempt and runs the no-show check for late joiners.
+  const room = await callBackend(`/sessions/${id}/room`, { method: "POST", timeoutMs: 20_000 });
+  if (room.error || !room.data?.url || !room.data?.token) {
+    if (room.status === 403) {
+      return <CallMessage sessionId={id} title="This call isn't open right now" body={room.error || "This session is not active."} />;
+    }
     return <CallMessage sessionId={id} title="We couldn't open the video room" body="Please refresh in a moment. If it keeps happening, contact support with your session reference." retry />;
   }
+  const roomUrl: string = room.data.url;
+  const token: string = room.data.token;
 
   return (
     <main className="fixed inset-0 z-50 flex flex-col bg-brand">

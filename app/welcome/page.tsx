@@ -32,12 +32,6 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
     .maybeSingle();
   if (profile?.full_name && profile?.date_of_birth) redirect(target);
 
-  const { data: tier } = await supabase
-    .from("subscription_tiers")
-    .select("allowed_language_codes")
-    .eq("id", profile?.subscription_tier || "free")
-    .maybeSingle();
-
   const meta = user.user_metadata || {};
   const defaultName: string = meta.full_name || meta.name || "";
   const first = defaultName.split(" ")[0];
@@ -72,7 +66,6 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
             <ClientProfileForm
               userId={user.id}
               existingProfile={profile?.full_name && profile?.date_of_birth ? (profile as any) : null}
-              allowedLanguageCodes={tier?.allowed_language_codes || null}
               afterSave={target}
               defaultName={defaultName}
               submitLabel="Save and continue"

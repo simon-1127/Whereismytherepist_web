@@ -14,6 +14,8 @@ import { Avatar } from "../components/ui";
 import FaqSection from "../components/home/FaqSection";
 import ReachSection from "../components/home/ReachSection";
 import SocialSection from "../components/home/SocialSection";
+import SelfCheckPromo from "../components/home/SelfCheckPromo";
+import PhysioPromo from "../components/home/PhysioPromo";
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE } from "../lib/site";
 
 export const metadata = {
@@ -127,6 +129,13 @@ export default async function Home() {
                   <Link href="#how" className="btn btn-quiet btn-lg">How it works</Link>
                 )}
               </div>
+              <Link
+                href="#physiotherapy"
+                className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/80 px-5 py-3 font-semibold text-ink ring-1 ring-line backdrop-blur transition hover:text-brand-violet hover:ring-brand-violet/40"
+              >
+                Physiotherapy at home
+                <span className="rounded-full bg-teal-soft px-2 py-0.5 text-xs font-bold text-teal">Coming soon</span>
+              </Link>
               <ul className="mt-9 grid max-w-xl grid-cols-[0.8fr_1.35fr_0.8fr] gap-2 text-sm sm:grid-cols-3 sm:gap-3" aria-label="Why people choose us">
                 {[
                   ["10", "Indian languages"],
@@ -198,6 +207,7 @@ export default async function Home() {
         </section>
 
         <TrustFooterBar />
+        <SelfCheckPromo />
         <AnxietyInfoSection />
         <ReachSection signedIn={!!user} />
         <FaqSection />
@@ -209,6 +219,8 @@ export default async function Home() {
           <ComparisonTableSection />
           <PricingSection />
         </AppZone>
+
+        <PhysioPromo />
       </main>
       <Footer />
     </>

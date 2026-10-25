@@ -31,8 +31,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 const AGE_LABELS: Record<string, string> = { children: "children", teens: "teens", adults: "adults", all_ages: "all ages" };
 
-export default async function TherapistProfile({ params }: { params: Promise<{ id: string }> }) {
+export default async function TherapistProfile({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ reschedule?: string }>;
+}) {
   const { id } = await params;
+  // Rebooking a missed session here (from the session page). The backend
+  // checks it's really this person's session and that it can be moved.
+  const { reschedule } = await searchParams;
+  const rescheduleFrom = reschedule && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reschedule) ? reschedule : null;
   const supabase = await createClient();
   const {
     data: { user },
@@ -209,7 +219,7 @@ export default async function TherapistProfile({ params }: { params: Promise<{ i
 
           <div className="order-2 min-w-0 lg:sticky lg:top-28 lg:order-none">
             {user ? (
-              <BookingWidget providerId={t.user_id} providerName={name} rateLabel={rate} />
+              <BookingWidget providerId={t.user_id} providerName={name} rateLabel={rate} rescheduleFrom={rescheduleFrom} />
             ) : (
               <div className="overflow-hidden card">
                 <div className="bg-brand px-5 py-4 text-white">
@@ -217,7 +227,7 @@ export default async function TherapistProfile({ params }: { params: Promise<{ i
                 </div>
                 <div className="p-5">
                   <p className="text-ink-2">Sign in to see {first}&rsquo;s open times and book.</p>
-                  <Link href={`/login?next=/therapists/${t.user_id}`} className="btn btn-primary mt-4 w-full">
+                  <Link href={`/login?next=${encodeURIComponent(`/therapists/${t.user_id}${rescheduleFrom ? `?reschedule=${rescheduleFrom}` : ""}`)}`} className="btn btn-primary mt-4 w-full">
                     Sign in to book
                   </Link>
                 </div>

@@ -25,9 +25,10 @@ export const VERIFICATION = {
 };
 
 export const SOCIALS = [
-  { id: "linkedin", name: "LinkedIn", handle: "Where's My Therapist", url: "https://www.linkedin.com/company/where-s-my-therapist/", blurb: "Company news, partnerships and open roles.", color: "#0A66C2" },
-  { id: "x", name: "X", handle: "@WheresMyThrpist", url: "https://x.com/WheresMyThrpist", blurb: "Quick, honest takes on mental health in India.", color: "#000000" },
-  { id: "facebook", name: "Facebook", handle: "Where's My Therapist", url: "https://www.facebook.com/share/1CEaLa5izs/", blurb: "Gentle reminders and updates from our community.", color: "#1877F2" },
+  { id: "instagram", name: "Instagram", handle: "@wheresmytherapist_official", url: "https://www.instagram.com/wheresmytherapist_official/", blurb: "Calm, bite-sized posts for everyday mental health.", color: "#E1306C", bg: "linear-gradient(45deg,#f9ce34 0%,#ee2a7b 50%,#6228d7 100%)" },
+  { id: "linkedin", name: "LinkedIn", handle: "Where's My Therapist", url: "https://www.linkedin.com/company/where-s-my-therapist/", blurb: "Company news, partnerships and open roles.", color: "#0A66C2", bg: "#0A66C2" },
+  { id: "x", name: "X", handle: "@WheresMyThrpist", url: "https://x.com/WheresMyThrpist", blurb: "Quick, honest takes on mental health in India.", color: "#000000", bg: "#000000" },
+  { id: "facebook", name: "Facebook", handle: "Where's My Therapist", url: "https://www.facebook.com/share/1CEaLa5izs/", blurb: "Gentle reminders and updates from our community.", color: "#1877F2", bg: "#1877F2" },
 ] as const;
 
 export const LANGUAGES = ["English", "Hindi", "Tamil", "Telugu", "Bengali", "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"];
@@ -78,6 +79,22 @@ export const FAQS: { q: string; a: string }[] = [
   {
     q: "How do online therapy sessions work?",
     a: "Pick a therapist and a time, pay with UPI, card or netbanking, and join a private, encrypted video call from your browser or the app at the scheduled time. The call opens 10 minutes before your session starts.",
+  },
+  {
+    q: "How long is a session?",
+    a: "Every session is 50 minutes with your therapist, booked as a 60-minute slot that includes a 10-minute break before their next client. All sessions are the same length, and the price on a therapist's profile is for one full session.",
+  },
+  {
+    q: "What if my therapist doesn't show up?",
+    a: "We check who has joined 30 minutes after the start time. If your therapist hasn't, you can reschedule for free or switch to a different therapist, and you won't lose your payment. The same goes if they cancel, or if our video system fails.",
+  },
+  {
+    q: "Can I change my therapist?",
+    a: "Yes. For future sessions, you can simply book someone else. If your therapist cancels or doesn't show for a booked session, you can move that booking to a different therapist. If the new therapist costs more, you pay only the difference; if they cost less, the difference is refunded to your original payment method within 5–7 working days.",
+  },
+  {
+    q: "How do refunds work?",
+    a: "Instead of cancelling, you can reschedule a booking for free up to 24 hours before it starts, twice per booking. If you think you should be refunded, for example because of a technical problem or your therapist was at fault, email support@wheresmytherapist.com. A person on our team reviews the session record, and approved refunds reach your original payment method in 5–7 working days. Our Cancellation & Refund Policy has the full details.",
   },
   {
     q: "Is online therapy as effective as in-person therapy?",

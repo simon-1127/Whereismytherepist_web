@@ -27,6 +27,7 @@ const COLUMNS = [
     links: [
       { href: "/privacy", label: "Privacy policy" },
       { href: "/terms", label: "Terms of use" },
+      { href: "/cancellation-refund-policy", label: "Cancellation & refunds" },
       { href: "/cookies", label: "Cookie policy" },
       { href: "/sitemap", label: "Sitemap" },
     ],
@@ -59,14 +60,28 @@ export default function Footer() {
                   target="_blank"
                   rel="noopener noreferrer me"
                   aria-label={`Where's My Therapist on ${s.name}`}
-                  style={{ ["--brand" as any]: s.color }}
-                  className="grid h-10 w-10 place-items-center rounded-full bg-mist text-ink-2 ring-1 ring-line transition-all hover:-translate-y-0.5 hover:bg-[var(--brand)] hover:text-white hover:ring-transparent"
+                  style={{ ["--brand" as any]: s.color, ["--brand-bg" as any]: s.bg }}
+                  className="grid h-10 w-10 place-items-center rounded-full bg-mist text-ink-2 ring-1 ring-line transition-all hover:-translate-y-0.5 hover:[background:var(--brand-bg)] hover:text-white hover:ring-transparent"
                 >
                   <SocialIcon id={s.id} className="h-[18px] w-[18px]" />
                 </a>
               </li>
             ))}
           </ul>
+          <a
+            href="https://www.producthunt.com/products/google-docs-10?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-google-docs-cfc207c3-e1ca-4891-be8c-b12b9bde5698"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-block transition-opacity hover:opacity-90"
+          >
+            <img
+              alt="Where's My Therapist, featured on Product Hunt"
+              width={250}
+              height={54}
+              loading="lazy"
+              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1291825&theme=dark&t=1792892011574"
+            />
+          </a>
         </div>
         {COLUMNS.map((col) => (
           <div key={col.title}>
@@ -85,7 +100,12 @@ export default function Footer() {
       </div>
       <div className="border-t border-line">
         <div className="shell flex flex-col gap-2 py-5 text-[13px] text-ink-3 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} Where&rsquo;s My Therapist. Made in India.</p>
+          <p>
+            © {new Date().getFullYear()} Where&rsquo;s My Therapist. Made in India.{" "}
+            <Link href="/quiz" className="hover:text-brand-violet">
+              Self-check powered by <span className="font-semibold">Sarvam AI</span>
+            </Link>
+          </p>
           <div className="flex gap-5">
             <CookieSettingsLink />
             <a href="mailto:partner@wheresmytherapist.com" className="hover:text-brand-violet">partner@wheresmytherapist.com</a>

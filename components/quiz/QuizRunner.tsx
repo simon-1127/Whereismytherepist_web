@@ -21,6 +21,7 @@ type Result = {
   howWeHelp: string[];
   therapistFocus: string;
   source: "ai" | "fallback";
+  reason?: string; // why the AI wasn't used (fallback only)
 };
 type Payload = {
   band: Band;
@@ -502,7 +503,22 @@ function Results({
         <div aria-hidden className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#00b8bc]/30 blur-3xl" />
         <div className="relative grid gap-8 md:grid-cols-[1.3fr_1fr] md:items-end">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-white/70">Your {concern.title.toLowerCase()} self-check</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-sm font-semibold uppercase tracking-[0.14em] text-white/70">Your {concern.title.toLowerCase()} self-check</p>
+              {result.source === "ai" ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold ring-1 ring-white/25">
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9L12 2zm6 12l.9 2.6 2.6.9-2.6.9L18 21l-.9-2.6-2.6-.9 2.6-.9L18 14z" /></svg>
+                  Written for you by Sarvam AI
+                </span>
+              ) : (
+                <span
+                  className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-white/75 ring-1 ring-white/20"
+                  title={result.reason ? `AI unavailable: ${result.reason}` : undefined}
+                >
+                  General guidance
+                </span>
+              )}
+            </div>
             <h1 className="mt-3 text-[2.2rem] font-bold leading-tight md:text-5xl">{band.label} impact</h1>
             <p className="mt-4 max-w-xl text-lg leading-relaxed text-white/85">{result.summary}</p>
           </div>

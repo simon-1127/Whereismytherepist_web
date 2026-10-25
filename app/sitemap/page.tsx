@@ -12,7 +12,7 @@ const SECTIONS = [
   { title: "Explore", links: [["/", "Home"], ["/therapists", "Find a therapist"], ["/quiz", "Free self-check quizzes"]] },
   { title: "Your account", links: [["/login", "Sign in or create an account"], ["/profile", "Your profile"], ["/sessions", "My sessions"], ["/provider/dashboard", "Therapist dashboard"]] },
   { title: "Company", links: [["/about", "About us"], ["/careers", "Careers"], ["/contact", "Contact"], ["/for-therapists", "Join as a therapist"]] },
-  { title: "Legal", links: [["/privacy", "Privacy policy"], ["/terms", "Terms of use, including the medical and AI disclaimer"]] },
+  { title: "Legal", links: [["/privacy", "Privacy policy"], ["/terms", "Terms of use, including the medical and AI disclaimer"], ["/cancellation-refund-policy", "Cancellation, reschedule and refund policy"]] },
 ];
 
 export default function SitemapPage() {

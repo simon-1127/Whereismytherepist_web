@@ -20,7 +20,7 @@ export default async function MySessionsPage({ searchParams }: { searchParams: P
 
   const { data: sessions } = await supabase
     .from("sessions")
-    .select("id, provider_id, status, scheduled_start, scheduled_end, amount, currency")
+    .select("id, provider_id, status, scheduled_start, scheduled_end, amount, currency, reschedule_state")
     .eq("client_id", user.id)
     .order("scheduled_start", { ascending: false })
     .limit(200);

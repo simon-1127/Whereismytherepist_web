@@ -12,16 +12,18 @@ const TIERS = [
     tagline: "Everyday emotional support",
     monthly: 299,
     features: ["Unlimited AI companion", "Daily mood check-in and breathing", "Full community access, including posting", "24/7 crisis SOS"],
-    cta: "Start 3 weeks free",
-    note: "Free for 3 weeks, then billed monthly",
+    cta: "Subscribe now",
+    note: "Skip the trial, billed from today",
+    href: (y: boolean) => `/login?mode=signup&next=${encodeURIComponent(`/profile?plan=starter&billing=${y ? "yearly" : "monthly"}&trial=0`)}`,
   },
   {
     name: "Growth",
-    tagline: "AI support plus real therapy, monthly",
+    tagline: "Deeper daily support",
     monthly: 799,
-    features: ["Everything in Starter", "MediTrack medication manager", "Priority booking in any of 10 languages"],
+    features: ["Everything in Starter", "MediTrack medication manager", "Full wellness library", "Faster, longer AI conversations"],
     cta: "Choose Growth",
     note: "Upgrade any time, even during your trial",
+    href: (y: boolean) => `/login?mode=signup&next=${encodeURIComponent(`/profile?plan=growth&billing=${y ? "yearly" : "monthly"}`)}`,
     popular: true,
   },
 ];
@@ -70,7 +72,11 @@ export default function PricingSection() {
 
       <ul data-reveal-group className="mt-12 grid gap-6 md:grid-cols-3" style={{ perspective: "1200px" }}>
         <li>
-          <div className="flex h-full flex-col rounded-[28px] bg-[linear-gradient(160deg,rgb(0_184_188/0.22),rgb(82_44_173/0.18))] p-7 text-white ring-1 ring-white/15">
+          <Tilt className="h-full rounded-[28px]" max={10} glare={0.4}>
+          <div
+            className="flex h-full flex-col rounded-[28px] bg-[linear-gradient(160deg,rgb(0_184_188/0.22),rgb(82_44_173/0.18))] p-7 text-white ring-1 ring-white/15"
+            style={{ transform: "translateZ(30px)" }}
+          >
             <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#5fe3e6]">Free trial</p>
             <p className="mt-4 font-display text-6xl font-bold leading-none">3 weeks</p>
             <p className="mt-2 text-white/70">of Starter, on us</p>
@@ -89,7 +95,14 @@ export default function PricingSection() {
             <p className="mt-6 rounded-2xl bg-white/10 px-4 py-3 text-sm text-white/80">
               Cancel any time before day 22 and you pay nothing.
             </p>
+            <Link
+              href={`/login?mode=signup&next=${encodeURIComponent("/profile?plan=starter&trial=1")}`}
+              className="btn mt-3 w-full bg-[#5fe3e6] font-semibold text-ink hover:bg-[#8ff0f2]"
+            >
+              Start free trial
+            </Link>
           </div>
+          </Tilt>
         </li>
         {TIERS.map((t) => (
           <li key={t.name}>
@@ -125,7 +138,7 @@ export default function PricingSection() {
                 </ul>
                 <p className={`mt-6 text-sm ${t.popular ? "text-ink-3" : "text-white/60"}`}>{t.note}</p>
                 <Link
-                  href="/login?mode=signup"
+                  href={t.href(yearly)}
                   className={`btn mt-3 w-full ${t.popular ? "btn-primary" : "bg-white/10 text-white ring-1 ring-white/20 hover:bg-white/20"}`}
                 >
                   {t.cta}

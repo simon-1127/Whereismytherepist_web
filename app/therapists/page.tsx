@@ -16,10 +16,13 @@ export const metadata = {
   alternates: { canonical: '/therapists' },
 };
 
-type SearchParams = { minPrice?: string; maxPrice?: string; specialties?: string; languages?: string; sort?: string };
+type SearchParams = { minPrice?: string; maxPrice?: string; specialties?: string; languages?: string; sort?: string; reschedule?: string };
 
 export default async function FindTherapist({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
+  // Choosing a different therapist for a missed session: keep that on every profile link.
+  const reschedule = params.reschedule && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.reschedule) ? params.reschedule : null;
+  const profileHref = (id: string) => `/therapists/${id}${reschedule ? `?reschedule=${reschedule}` : ""}`;
   const supabase = await createClient();
   const {
     data: { user },
@@ -42,7 +45,7 @@ export default async function FindTherapist({ searchParams }: { searchParams: Pr
                 It&rsquo;s free. Once you&rsquo;re in, you can filter by what you&rsquo;re going through, your language and your
                 budget, and book a time that works.
               </p>
-              <Link href="/login?next=/therapists" className="btn btn-primary btn-lg mt-8">
+              <Link href={`/login?next=${encodeURIComponent(reschedule ? `/therapists?reschedule=${reschedule}` : "/therapists")}`} className="btn btn-primary btn-lg mt-8">
                 Sign in or create an account
               </Link>
             </div>
@@ -104,6 +107,12 @@ export default async function FindTherapist({ searchParams }: { searchParams: Pr
   return (
     <>
       <main className="shell py-8 md:py-12">
+        {reschedule && (
+          <p className="alert alert-ok mb-6">
+            Choosing a therapist for your missed session. What you paid carries over: pick anyone and you&rsquo;ll only pay any
+            difference, or get it back if they cost less.
+          </p>
+        )}
         <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h1 className="text-[2.4rem] font-bold md:text-[3.4rem]">Find your therapist</h1>
@@ -147,7 +156,7 @@ export default async function FindTherapist({ searchParams }: { searchParams: Pr
                           <div className="min-w-0">
                             <h2 className="flex flex-wrap items-center gap-2 text-2xl font-semibold">
                               {/* after: overlay stretches this link over the whole card */}
-                              <Link href={`/therapists/${t.user_id}`} className="after:absolute after:inset-0 after:content-[''] group-hover:text-brand-violet">
+                              <Link href={profileHref(t.user_id)} className="after:absolute after:inset-0 after:content-[''] group-hover:text-brand-violet">
                                 {t.full_name || "Therapist"}
                               </Link>
                               {t.kyc_status === "verified" && (
@@ -177,7 +186,7 @@ export default async function FindTherapist({ searchParams }: { searchParams: Pr
                               per session{t.rating_count ? `, ★ ${Number(t.rating_avg).toFixed(1)}` : ""}
                             </p>
                           </div>
-                          <Link href={`/therapists/${t.user_id}`} className="btn btn-primary btn-sm relative z-10 md:w-full">
+                          <Link href={profileHref(t.user_id)} className="btn btn-primary btn-sm relative z-10 md:w-full">
                             Book
                           </Link>
                         </div>

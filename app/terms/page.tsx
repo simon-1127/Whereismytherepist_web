@@ -14,7 +14,7 @@ export default function TermsPage() {
       <PageHeader
         title="Terms of"
         highlight="Use"
-        description="Last updated 14 September 2026. Please read this alongside our Medical & AI Disclaimer below before using the Services."
+        description="Last updated 4 October 2026. Please read this alongside our Medical & AI Disclaimer below before using the Services."
       />
 
       <div className="shell grid w-full flex-grow grid-cols-1 gap-10 py-12 lg:grid-cols-[260px_1fr]">
@@ -131,6 +131,15 @@ export default function TermsPage() {
 
             <LegalSection id="terms-4" title="4. Healthcare Professionals">
               <p>WMT may connect you with independent healthcare professionals. Healthcare professionals may include psychologists, therapists, psychiatrists, counsellors, and other qualified professionals. The professional — not WMT — is responsible for their professional assessment, advice, diagnosis, treatment, and clinical decisions. You should verify the provider information displayed in the application before beginning a consultation.</p>
+              <p><strong>For providers using WMT.</strong> If you offer sessions through WMT, these terms also form your provider agreement with us:</p>
+              <LegalList items={[
+                "Session format: every booking is a 60-minute slot, made up of a 50-minute session followed by a 10-minute break. Shorter or longer formats are not offered.",
+                "Fees: you set your price per session within the range shown in the provider app. For each completed session you receive 78% of the session fee and WMT keeps 22% to cover payments, video calls, the platform and support.",
+                "Reliability: please join on time and keep the bookings you accept. If you cancel a confirmed booking or don't join, you are responsible for it. If the client then switches therapist or is refunded, you forfeit your 78% share for that booking. If the client reschedules with you and the session takes place, you are paid normally.",
+                "Client no-shows: if the client doesn't join by 30 minutes after the start and you did, the session counts as attended and you are paid.",
+                "Technical failures on WMT's side: the client reschedules free of charge and you are not penalised.",
+                "Attendance records: WMT automatically records join and leave times, join attempts and connection failures for each session, and uses them to settle bookings, payouts and disputes. We never record what is said in a session.",
+              ]} />
             </LegalSection>
 
             <LegalSection id="terms-5" title="5. No Guarantee of Outcomes">
@@ -176,7 +185,9 @@ export default function TermsPage() {
             <LegalSection id="terms-12" title="12. Payments">
               <p>Fees for paid Services will be displayed before purchase where reasonably practicable. Prices may vary by:</p>
               <LegalList items={["Provider", "Service", "Session duration", "Location", "Program", "Subscription", "Other applicable factors"]} />
-              <p>Payments may be processed by third-party payment providers. Refunds and cancellations are subject to the applicable cancellation and refund policy displayed at the time of purchase.</p>
+              <p>Payments may be processed by third-party payment providers. Each therapy session is a 60-minute booking (a 50-minute session plus a 10-minute break), paid in full when you book.</p>
+              <p><strong>Rescheduling, cancellations and refunds</strong> are governed by our <a href="/cancellation-refund-policy" className="link">Cancellation, Reschedule &amp; Refund Policy</a>, which forms part of these Terms. In summary: you can reschedule a booking free of charge up to 24 hours before it starts, up to twice per booking; bookings are not cancelled in the app; if your provider cancels or doesn&apos;t join, or our systems fail, you can reschedule free or switch provider; and refunds outside these cases are reviewed by our support team and, where approved, returned to your original payment method within 5–7 working days.</p>
+              <p><strong>Attendance.</strong> 30 minutes after a session&apos;s start time, attendance is checked automatically using the join and leave times reported by our video provider, together with join attempts and connection failures. If you do not join and your provider does, the session counts as attended and is not refunded. These records are used only to apply our policies and resolve disputes fairly.</p>
               <p><strong>Free trial and auto-renewal.</strong> New app accounts get a 21-day free trial of the Starter plan. To start the trial you may be asked to set up a recurring payment mandate (UPI AutoPay or a card or bank e-mandate) through our payment partner. You will not be charged during the trial. Unless you cancel before the trial ends, your chosen plan (Starter at ₹299 per month or Growth at ₹799 per month, or the yearly price shown at signup) begins on day 22 and renews automatically each billing period until you cancel.</p>
               <LegalList items={[
                 "We remind you by email and in the app at least 3 days before the trial ends.",

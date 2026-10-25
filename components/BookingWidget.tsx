@@ -2,27 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "../lib/supabase/client";
 import { dateParts, fmtTime, istDayKey } from "../lib/format";
+import { loadRazorpay } from "../lib/checkout";
+import { formatMoney } from "../lib/money";
 
 type Slot = { id: string; start_time: string; end_time: string };
-
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
-
-function loadRazorpay(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (window.Razorpay) return resolve(true);
-    const s = document.createElement("script");
-    s.src = "https://checkout.razorpay.com/v1/checkout.js";
-    s.onload = () => resolve(true);
-    s.onerror = () => resolve(false);
-    document.body.appendChild(s);
-  });
-}
+type Quote = { credit_amount: number; new_amount: number; amount_due: number; refund_amount: number };
 
 // Group by the IST calendar day, so a 12:30 AM slot isn't filed under the
 // previous day for someone whose laptop clock is set to another zone.
@@ -49,10 +36,13 @@ export default function BookingWidget({
   providerId,
   providerName,
   rateLabel,
+  rescheduleFrom,
 }: {
   providerId: string;
   providerName: string;
   rateLabel: string;
+  /** Moving an existing booking here (free after a missed session): what's paid carries over as credit. */
+  rescheduleFrom?: string | null;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -63,6 +53,18 @@ export default function BookingWidget({
   const [slotId, setSlotId] = useState<string | null>(null);
   const [busy, setBusy] = useState<null | "starting" | "paying" | "confirming">(null);
   const [error, setError] = useState("");
+  const [quote, setQuote] = useState<Quote | null>(null);
+
+  useEffect(() => {
+    if (!rescheduleFrom) return;
+    fetch(`/api/sessions/${rescheduleFrom}/reschedule-quote?provider_id=${providerId}`)
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (r.ok) setQuote(d);
+        else setError(d.error || "This session can't be moved here.");
+      })
+      .catch(() => undefined);
+  }, [rescheduleFrom, providerId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +104,8 @@ export default function BookingWidget({
       router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
+
+    if (rescheduleFrom) return handleReschedule(user.email || undefined);
 
     setBusy("starting");
     try {
@@ -157,13 +161,81 @@ export default function BookingWidget({
     }
   }
 
-  const buttonLabel =
-    busy === "starting" ? "Reserving your slot…" : busy === "paying" ? "Complete payment in the window" : busy === "confirming" ? "Confirming…" : selected ? `Pay ${rateLabel} and book` : "Choose a time";
+  /**
+   * Moves the existing booking to the chosen slot (backend RescheduleService).
+   * Same or lower price: confirmed at once (any difference is refunded).
+   * Higher price: a top-up order for the difference, then the same verify
+   * as a normal booking.
+   */
+  async function handleReschedule(email?: string) {
+    setBusy("starting");
+    try {
+      const res = await fetch(`/api/sessions/${rescheduleFrom}/reschedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider_id: providerId, slot_id: slotId, idempotency_key: crypto.randomUUID() }),
+      });
+      const r = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 409) setSlots((prev) => prev.filter((s) => s.id !== slotId));
+        throw new Error(r.error || "We couldn't move your session.");
+      }
+      if (r.status === "confirmed") {
+        router.push(`/sessions/${r.session_id}`);
+        return;
+      }
+
+      if (!(await loadRazorpay())) throw new Error("The payment window couldn't load. Check your connection and try again.");
+      setBusy("paying");
+      const rzp = new window.Razorpay({
+        key: r.razorpay_key_id,
+        amount: r.amount_due,
+        currency: "INR",
+        order_id: r.razorpay_order_id,
+        name: "Where's My Therapist",
+        description: `Difference for your session with ${providerName}`,
+        prefill: { email },
+        theme: { color: "#1b1a47" },
+        handler: async (response: any) => {
+          setBusy("confirming");
+          await fetch(`/api/sessions/${r.session_id}/verify-topup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(response),
+          }).catch(() => undefined);
+          router.push(`/sessions/${r.session_id}`);
+        },
+        modal: { ondismiss: () => setBusy(null) },
+      });
+      rzp.on("payment.failed", (e: any) => {
+        setError(e?.error?.description || "The payment didn't go through. Your original booking is unchanged — try again.");
+        setBusy(null);
+      });
+      rzp.open();
+    } catch (err: any) {
+      setError(err.message || "Something went wrong. Please try again.");
+      setBusy(null);
+    }
+  }
+
+  const buttonLabel = rescheduleFrom
+    ? busy === "starting"
+      ? "Moving your session…"
+      : busy === "paying"
+        ? "Complete payment in the window"
+        : busy === "confirming"
+          ? "Confirming…"
+          : !selected
+            ? "Choose a new time"
+            : quote?.amount_due
+              ? `Pay ${formatMoney(quote.amount_due, "INR")} more and move`
+              : "Move my session here"
+    : busy === "starting" ? "Reserving your slot…" : busy === "paying" ? "Complete payment in the window" : busy === "confirming" ? "Confirming…" : selected ? `Pay ${rateLabel} and book` : "Choose a time";
 
   return (
     <div className="overflow-hidden card">
       <div className="flex items-baseline justify-between bg-brand px-5 py-4 text-white">
-        <h2 className="font-display text-xl font-semibold">Book a session</h2>
+        <h2 className="font-display text-xl font-semibold">{rescheduleFrom ? "Pick a new time" : "Book a session"}</h2>
         <p>
           <span className="font-display text-xl font-semibold">{rateLabel}</span>
           <span className="text-sm text-white/60"> / session</span>
@@ -171,6 +243,12 @@ export default function BookingWidget({
       </div>
 
       <div className="p-5">
+        {rescheduleFrom && (
+          <p className="alert alert-ok mb-5">
+            Rescheduling your session. {quote ? `Your ${formatMoney(quote.credit_amount, "INR")} carries over` : "What you paid carries over"}
+            {quote?.amount_due ? `; ${providerName.split(" ")[0]} costs ${formatMoney(quote.amount_due, "INR")} more.` : quote?.refund_amount ? ` and ${formatMoney(quote.refund_amount, "INR")} is refunded to you.` : " — nothing more to pay."}
+          </p>
+        )}
         {loading ? (
           <div className="space-y-3" aria-busy="true">
             <div className="h-[72px] animate-pulse rounded-[var(--radius-inner)] bg-mist" />
@@ -235,7 +313,9 @@ export default function BookingWidget({
           {buttonLabel}
         </button>
         <p className="mt-3 text-center text-[13px] text-ink-3">
-          UPI, cards and netbanking via Razorpay. Your slot is held for 15 minutes while you pay.
+          UPI, cards and netbanking via Razorpay. Your slot is held for 15 minutes while you pay. 60-minute session; free
+          rescheduling up to 24 hours before.{" "}
+          <Link href="/cancellation-refund-policy" target="_blank" className="link">Cancellation &amp; refund policy</Link>
         </p>
       </div>
     </div>

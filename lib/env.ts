@@ -12,6 +12,9 @@ export const BOOKING_ENV = [
   "RAZORPAY_KEY_SECRET",
 ] as const;
 
+/** Railway backend base URL (no trailing path): payout KYC and client plans. */
+export const BACKEND_ENV = ["API_BASE_URL"] as const;
+
 // NEXT_PUBLIC_* values are inlined at build time only when written out
 // literally (process.env.NEXT_PUBLIC_X), so they can't be looked up by name.
 const BUILD_TIME: Record<string, string | undefined> = {

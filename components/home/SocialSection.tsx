@@ -24,19 +24,19 @@ export default function SocialSection() {
             </p>
           </div>
 
-          <ul className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+          <ul className="grid gap-3 sm:grid-cols-2">
             {SOCIALS.map((s, i) => (
-              <li key={s.id} className="social-tile" style={{ ["--brand" as any]: s.color, animationDelay: `${i * 0.12}s` }}>
+              <li key={s.id} className="social-tile" style={{ ["--brand" as any]: s.color, ["--brand-bg" as any]: s.bg, animationDelay: `${i * 0.12}s` }}>
                 <a
                   href={s.url}
                   target="_blank"
                   rel="noopener noreferrer me"
                   aria-label={`Follow Where's My Therapist on ${s.name}`}
-                  className="group relative flex h-full flex-col gap-4 overflow-hidden rounded-[24px] bg-white p-5 text-ink shadow-[0_18px_40px_-18px_rgb(19_18_74/0.55)] transition-all duration-300 hover:-translate-y-1.5 hover:rotate-[-1deg] lg:flex-row lg:items-center xl:flex-col xl:items-stretch"
+                  className="group relative flex h-full flex-col gap-4 overflow-hidden rounded-[24px] bg-white p-5 text-ink shadow-[0_18px_40px_-18px_rgb(19_18_74/0.55)] transition-all duration-300 hover:-translate-y-1.5 hover:rotate-[-1deg] "
                 >
                   {/* brand colour sweeps in on hover */}
-                  <span aria-hidden className="absolute inset-0 origin-bottom scale-y-0 bg-[var(--brand)] transition-transform duration-300 ease-out group-hover:scale-y-100" />
-                  <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[var(--brand)] text-white transition-colors duration-300 group-hover:bg-white group-hover:text-[var(--brand)]">
+                  <span aria-hidden className="absolute inset-0 origin-bottom scale-y-0 [background:var(--brand-bg)] transition-transform duration-300 ease-out group-hover:scale-y-100" />
+                  <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-white transition-all duration-300 [background:var(--brand-bg)] group-hover:[background:white] group-hover:text-[var(--brand)]">
                     <SocialIcon id={s.id} className="h-6 w-6" />
                   </span>
                   <span className="relative min-w-0 flex-1 transition-colors duration-300 group-hover:text-white">

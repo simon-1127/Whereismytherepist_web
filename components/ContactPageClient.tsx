@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import PageHeader from "./PageHeader";
 import Footer from "./Footer";
+import { createClient } from "../lib/supabase/client";
 
 const FAQS = [
   { q: "How long does it take to hear back?", a: "Usually within a day, often much sooner. For anything urgent, message us on WhatsApp." },
@@ -21,14 +22,43 @@ const CHANNELS = [
 
 export default function ContactPageClient() {
   const [open, setOpen] = useState<number | null>(0);
-  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "", company: "" });
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // No backend for this form yet: it opens the visitor's email app with
-  // everything filled in, so a message is never silently dropped.
-  function handleSubmit(e: React.FormEvent) {
+  // Signed in? Fill in what we already know.
+  useEffect(() => {
+    createClient()
+      .auth.getUser()
+      .then(({ data: { user } }) => {
+        if (!user) return;
+        const meta = user.user_metadata || {};
+        setForm((f) => ({ ...f, email: f.email || user.email || "", name: f.name || meta.full_name || meta.name || "" }));
+      });
+  }, []);
+
+  // Sent to support@ by /api/contact (Resend). If that fails, the error
+  // offers the email address so a message is never silently dropped.
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const body = `${form.message}\n\n— ${form.name} (${form.email})`;
-    window.location.href = `mailto:support@wheresmytherapist.com?subject=${encodeURIComponent(form.subject)}&body=${encodeURIComponent(body)}`;
+    setErrorMsg(null);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "We couldn't send your message.");
+      setSent(true);
+      setForm((f) => ({ ...f, subject: "", message: "" }));
+    } catch (err: any) {
+      setErrorMsg(err.message || "Network error. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -40,8 +70,25 @@ export default function ContactPageClient() {
 
       <main className="shell space-y-16 py-16 md:space-y-24 md:py-20">
         <section className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+          {sent ? (
+          <div className="sheet flex flex-col items-start justify-center gap-3 p-6 md:p-10" role="status">
+            <p className="text-4xl text-teal" aria-hidden>✓</p>
+            <h2 className="text-3xl font-bold">Message sent</h2>
+            <p className="text-ink-2">Thanks, {form.name.split(" ")[0] || "there"}. A real person will reply to {form.email}, usually within a day.</p>
+            <button type="button" onClick={() => setSent(false)} className="btn btn-quiet mt-2">Send another message</button>
+          </div>
+          ) : (
           <form onSubmit={handleSubmit} className="sheet space-y-5 p-6 md:p-10">
             <h2 className="text-3xl font-bold">Send a message</h2>
+            {errorMsg && (
+              <p role="alert" className="alert alert-error">
+                {errorMsg} You can also email <a href="mailto:support@wheresmytherapist.com" className="font-semibold underline">support@wheresmytherapist.com</a>.
+              </p>
+            )}
+            <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+              <label htmlFor="c-company">Company</label>
+              <input id="c-company" tabIndex={-1} autoComplete="off" value={form.company} onChange={set("company")} />
+            </div>
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
                 <label htmlFor="c-name" className="field-label">Your name</label>
@@ -58,10 +105,11 @@ export default function ContactPageClient() {
             </div>
             <div>
               <label htmlFor="c-message" className="field-label">Message</label>
-              <textarea id="c-message" required rows={5} value={form.message} onChange={set("message")} className="field" />
+              <textarea id="c-message" required rows={5} maxLength={5000} value={form.message} onChange={set("message")} className="field" />
             </div>
-            <button type="submit" className="btn btn-primary">Open in my email app</button>
+            <button type="submit" disabled={busy} className="btn btn-primary">{busy ? "Sending…" : "Send message"}</button>
           </form>
+          )}
 
           <div className="space-y-4">
             <div className="card p-6 md:p-8">

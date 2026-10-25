@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { displayStatus, type Bucket } from "../lib/sessions";
+import { displayStatus, needsReschedule, type Bucket } from "../lib/sessions";
 import { fmtDayLong, fmtTimeRange } from "../lib/format";
 import { formatMoney } from "../lib/money";
 import { canJoinSession } from "../lib/daily";
@@ -10,6 +10,7 @@ export type BoardSession = {
   status: string;
   scheduled_start: string;
   scheduled_end: string;
+  reschedule_state?: string | null;
   amount: number | null;
   currency: string | null;
   provider_payout_amount?: number | null;
@@ -40,7 +41,12 @@ export default function SessionsBoard({
   perspective: "client" | "provider";
 }) {
   const now = Date.now();
-  const withDisplay = sessions.map((s) => ({ ...s, display: displayStatus(s, now) }));
+  const withDisplay = sessions.map((s) => {
+    const display = displayStatus(s, now);
+    // The therapist can't rebook it; the client does.
+    if (perspective === "provider" && needsReschedule(s)) return { ...s, display: { ...display, label: "Client to pick a new time" } };
+    return { ...s, display };
+  });
 
   const buckets: Record<Bucket, typeof withDisplay> = { upcoming: [], history: [], cancelled: [] };
   withDisplay.forEach((s) => buckets[s.display.bucket].push(s));
@@ -48,7 +54,7 @@ export default function SessionsBoard({
   buckets.history.sort((a, b) => b.scheduled_start.localeCompare(a.scheduled_start));
   buckets.cancelled.sort((a, b) => b.scheduled_start.localeCompare(a.scheduled_start));
 
-  const next = buckets.upcoming.find((s) => s.status !== "pending_payment");
+  const next = buckets.upcoming.find((s) => s.status !== "pending_payment" && !needsReschedule(s));
   const list = buckets[view];
 
   const completed = buckets.history.filter((s) => s.display.label === "Completed");

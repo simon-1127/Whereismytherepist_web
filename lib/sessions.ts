@@ -4,7 +4,14 @@ export type SessionLike = {
   status: string;
   scheduled_start: string;
   scheduled_end: string;
+  /** 'required' = missed through no fault of the client; they can rebook free. */
+  reschedule_state?: string | null;
 };
+
+/** Statuses where the backend offers the client a free reschedule. */
+export const FREE_RESCHEDULE_STATUSES = ["no_show_provider", "no_show_both", "cancelled_by_provider", "interrupted"];
+
+export const needsReschedule = (s: SessionLike) => s.reschedule_state === "required" && FREE_RESCHEDULE_STATUSES.includes(s.status);
 
 export type Bucket = "upcoming" | "history" | "cancelled";
 
@@ -25,6 +32,9 @@ export function displayStatus(s: SessionLike, now = Date.now()): Display {
   const { opensAt, closesAt } = joinWindow(s.scheduled_start, s.scheduled_end);
   const over = now > closesAt;
 
+  // Kept under "upcoming" so it can't be missed: there's a booking to make.
+  if (needsReschedule(s)) return { label: "Reschedule for free", tone: "amber", bucket: "upcoming" };
+
   switch (s.status) {
     case "pending_payment":
       return over
@@ -41,6 +51,12 @@ export function displayStatus(s: SessionLike, now = Date.now()): Display {
       return { label: "Missed", tone: "muted", bucket: "history" };
     case "no_show_provider":
       return { label: "Therapist didn't join", tone: "amber", bucket: "history" };
+    case "no_show_both":
+      return { label: "Missed", tone: "muted", bucket: "history" };
+    case "interrupted":
+      return { label: "Interrupted", tone: "amber", bucket: "history" };
+    case "rescheduled":
+      return { label: "Rescheduled", tone: "muted", bucket: "cancelled" };
     case "cancelled_by_client":
       return { label: "Cancelled", tone: "muted", bucket: "cancelled" };
     case "cancelled_by_provider":

@@ -26,7 +26,6 @@ function calculateAge(dob: string): number {
 export default function ClientProfileForm({
   userId,
   existingProfile,
-  allowedLanguageCodes,
   afterSave,
   defaultName,
   submitLabel,
@@ -36,7 +35,6 @@ export default function ClientProfileForm({
 }: {
   userId: string;
   existingProfile: ExistingProfile;
-  allowedLanguageCodes: string[] | null; // null = no restriction (all allowed)
   afterSave?: string; // where first-time setup goes next
   defaultName?: string; // e.g. the name Google or Apple gave us
   submitLabel?: string;
@@ -61,10 +59,6 @@ export default function ClientProfileForm({
 
   const age = dob ? calculateAge(dob) : null;
   const isMinor = age !== null && age < 18;
-
-  const preferredLanguageOptions = allowedLanguageCodes
-    ? LANGUAGE_CODES.filter((l) => allowedLanguageCodes.includes(l.code))
-    : LANGUAGE_CODES;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -201,11 +195,10 @@ export default function ClientProfileForm({
             <label htmlFor="session_lang" className="field-label">Language for sessions</label>
             <select id="session_lang" value={preferredLanguage} onChange={(e) => setPreferredLanguage(e.target.value)} className="field">
               <option value="">No preference</option>
-              {preferredLanguageOptions.map((l) => (
+              {LANGUAGE_CODES.map((l) => (
                 <option key={l.code} value={l.code}>{l.native} ({l.label})</option>
               ))}
             </select>
-            {allowedLanguageCodes && <p className="field-hint">All 10 languages are included in the Growth plan.</p>}
           </div>
           <div>
             <label htmlFor="tz" className="field-label">Timezone</label>

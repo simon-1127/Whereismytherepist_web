@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "../../../lib/supabase/server";
 import { formatMoney } from "../../../lib/money";
 import { fmtDayLong, fmtDayShort, fmtTime, fmtTimeRange, minutesBetween } from "../../../lib/format";
-import { displayStatus } from "../../../lib/sessions";
+import { displayStatus, needsReschedule } from "../../../lib/sessions";
 import { canJoinSession, joinWindow } from "../../../lib/daily";
 import { Avatar, StatusPill } from "../../../components/ui";
 import PaymentWatcher from "../../../components/PaymentWatcher";
@@ -44,6 +44,13 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
   const canJoin = canJoinSession(session, now);
   const { opensAt } = joinWindow(session.scheduled_start, session.scheduled_end);
   const backHref = isProvider ? "/provider/bookings" : "/sessions";
+  const rebook = needsReschedule(session);
+  const MISSED_WHY: Record<string, string> = {
+    no_show_provider: "Your therapist didn't join the call.",
+    no_show_both: "The call couldn't go ahead — we didn't see both of you in the room.",
+    interrupted: "The call was interrupted on our side.",
+    cancelled_by_provider: "Your therapist cancelled this session.",
+  };
 
   // Session log: a real sequence of what happened to this booking.
   const paid = !["pending_payment"].includes(session.status);
@@ -122,7 +129,27 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
               </div>
             ) : null}
 
-            {display.bucket !== "upcoming" && isClient && other.id && (
+            {rebook && isClient && (
+              <div className="rounded-[var(--radius-inner)] border border-amber/30 bg-amber-soft p-5">
+                <p className="font-semibold text-ink">{MISSED_WHY[session.status] || "This session didn't go ahead."}</p>
+                <p className="mt-1 text-ink-2">
+                  Your payment is safe. Pick a new time for free, or choose a different therapist — what you paid carries over.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Link href={`/therapists/${session.provider_id}?reschedule=${session.id}`} className="btn btn-primary">
+                    Pick a new time with {other.name.split(" ")[0]}
+                  </Link>
+                  <Link href={`/therapists?reschedule=${session.id}`} className="btn btn-quiet">Choose a different therapist</Link>
+                </div>
+              </div>
+            )}
+            {rebook && isProvider && (
+              <div className="well px-5 py-4 text-ink-2">
+                This session didn&rsquo;t go ahead. The client can pick a new time for free; it will show up in your bookings.
+              </div>
+            )}
+
+            {display.bucket !== "upcoming" && isClient && other.id && !rebook && (
               <Link href={`/therapists/${other.id}`} className="btn btn-quiet w-full">
                 Book another session with {other.name.split(" ")[0]}
               </Link>

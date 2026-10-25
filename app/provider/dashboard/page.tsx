@@ -101,6 +101,19 @@ export default async function ProviderDashboardPage() {
         </div>
       )}
 
+      {profile.application_status === "approved" && profile.kyc_status !== "verified" && (
+        <div className="alert alert-warn mb-6 flex flex-wrap items-center justify-between gap-3">
+          <span>
+            {profile.kyc_status === "pending"
+              ? "We're verifying your bank account. Payouts start once it's verified."
+              : profile.kyc_status === "failed"
+                ? "We couldn't verify your bank account. Update it to get paid."
+                : "Add your bank account so we can pay you for your sessions."}
+          </span>
+          {profile.kyc_status !== "pending" && <Link href="/provider/payout" className="font-semibold underline">Add bank details</Link>}
+        </div>
+      )}
+
       <div data-reveal-group className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <section className="rounded-[var(--radius-sheet)] bg-brand p-7 text-white md:p-9">
           <p className="text-sm font-semibold text-lilac">Next session</p>

@@ -3,11 +3,12 @@ import PageHeader from "../../components/PageHeader";
 import Footer from "../../components/Footer";
 import { SESSION_PRICE_RANGE } from "../../lib/pricing";
 import { jsonLd, SITE_URL } from "../../lib/site";
+import { POLICY, SESSION } from "../../lib/policy";
 
 export const metadata = {
   title: "Join as a Therapist: Provider Onboarding",
   description:
-    "Psychologists and counsellors in India: create a provider account on Where's My Therapist, set your own price and hours, and see exactly which documents to send for verification.",
+    "Psychologists and counsellors in India: join Where's My Therapist, set your own price and hours, keep 78% of every session fee, and see exactly which documents to send for verification.",
   alternates: { canonical: "/for-therapists" },
 };
 
@@ -107,6 +108,22 @@ const FAQS = [
     a: `You choose your own price per session, anywhere from ${SESSION_PRICE_RANGE}. You can change it later from your profile.`,
   },
   {
+    q: "How much do I earn per session?",
+    a: `You keep ${POLICY.providerSharePct}% of the fee for every completed session; we keep ${POLICY.platformSharePct}% to cover payments, video calls, the platform and support. At ₹1,000 a session, you receive ₹780.`,
+  },
+  {
+    q: "How long is a session?",
+    a: `Every booking is a ${SESSION.slotMinutes}-minute slot: a ${SESSION.talkMinutes}-minute session with your client, then a ${SESSION.breakMinutes}-minute break before your next one. There are no shorter or longer formats.`,
+  },
+  {
+    q: "What if my client doesn't show up?",
+    a: `We check attendance automatically ${POLICY.attendanceCheckMinutes} minutes after the start. If you joined and your client didn't, the session counts as attended and you're paid in full.`,
+  },
+  {
+    q: "What if I need to cancel?",
+    a: `Life happens, so if you must cancel, do it as early as you can. If you cancel a confirmed booking or don't join, and the client then switches therapist or is refunded, you forfeit your ${POLICY.providerSharePct}% for that booking. If they reschedule with you and the session goes ahead, you're paid as normal.`,
+  },
+  {
     q: "Is it safe to email my Aadhaar and bank details?",
     a: "Send them only to partner@wheresmytherapist.com. A masked Aadhaar is enough. We use these documents only to verify you and pay you, and we will never ask for an OTP, password or UPI PIN.",
   },
@@ -133,7 +150,7 @@ export default function ForTherapistsPage() {
       />
       <PageHeader
         title="Join as a therapist"
-        description="Reach people across India who are looking for help in their own language. Set your own price and hours; we take care of bookings, payments and video calls."
+        description="Reach people across India who are looking for help in their own language. Set your own price and hours, keep 78% of every session fee, and let us take care of bookings, payments and video calls."
         aside={
           <Link href="/login?mode=signup&as=provider" className="btn btn-primary btn-lg btn-shine">
             Create therapist account
@@ -142,6 +159,49 @@ export default function ForTherapistsPage() {
       />
 
       <main className="shell space-y-16 py-14 md:space-y-24 md:py-20">
+        <section aria-labelledby="earn-title">
+          <h2 id="earn-title" data-reveal className="text-4xl font-bold md:text-5xl">How it works for you</h2>
+          <div data-reveal-group className="mt-10 grid gap-4 lg:grid-cols-3">
+            <div className="flex flex-col rounded-[var(--radius-sheet)] bg-brand p-7 text-white">
+              <p className="text-sm font-semibold uppercase tracking-[0.14em] text-white/70">Your earnings</p>
+              <p className="mt-3 font-display text-6xl font-bold leading-none">{POLICY.providerSharePct}%</p>
+              <p className="mt-2 text-white/85">of every session fee is yours. We keep {POLICY.platformSharePct}% for payments, video, the platform and support.</p>
+              <div className="mt-auto pt-6">
+                <div className="flex h-3 overflow-hidden rounded-full bg-white/20" aria-hidden>
+                  <span className="bg-white" style={{ width: `${POLICY.providerSharePct}%` }} />
+                </div>
+                <p className="mt-3 text-sm text-white/80">Example: a ₹1,000 session pays you <strong className="text-white">₹780</strong>.</p>
+              </div>
+            </div>
+            <div className="card flex flex-col p-7">
+              <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand-violet">Session format</p>
+              <p className="mt-3 font-display text-6xl font-bold leading-none">{SESSION.talkMinutes}<span className="text-3xl"> min</span></p>
+              <p className="mt-2 text-ink-2">
+                with your client, then a {SESSION.breakMinutes}-minute break before the next one. Every booking is a {SESSION.slotMinutes}-minute slot, so your
+                calendar stays simple.
+              </p>
+              <div className="mt-auto flex gap-1 pt-6" aria-hidden>
+                <span className="h-3 rounded-l-full bg-[#522cad]" style={{ width: `${(SESSION.talkMinutes / SESSION.slotMinutes) * 100}%` }} />
+                <span className="h-3 flex-1 rounded-r-full bg-[#00b8bc]/50" />
+              </div>
+            </div>
+            <div className="card flex flex-col p-7">
+              <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand-violet">Reliability</p>
+              <p className="mt-3 font-display text-2xl font-bold leading-tight">Clients are trusting you with a hard moment. Please be there.</p>
+              <ul className="mt-4 space-y-2.5 text-[15px] text-ink-2">
+                <li className="flex gap-2.5"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal" />Join on time. Attendance is checked automatically {POLICY.attendanceCheckMinutes} minutes in.</li>
+                <li className="flex gap-2.5"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal" />Client doesn&rsquo;t show? You&rsquo;re still paid.</li>
+                <li className="flex gap-2.5"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal" />Our tech fails? You&rsquo;re never penalised.</li>
+                <li className="flex gap-2.5"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-rose" />You cancel or don&rsquo;t join? You forfeit that booking&rsquo;s share if the client switches or is refunded.</li>
+              </ul>
+            </div>
+          </div>
+          <p className="mt-5 text-sm text-ink-3">
+            Full details are in our <Link href="/terms#terms-4" className="link">provider terms</Link> and{" "}
+            <Link href="/cancellation-refund-policy" className="link">cancellation and refund policy</Link>.
+          </p>
+        </section>
+
         <section>
           <h2 data-reveal className="text-4xl font-bold md:text-5xl">How onboarding works</h2>
           <ol data-reveal-group className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-5">

@@ -178,7 +178,7 @@ function LoginInner() {
               <>
                 <p className="font-display text-[2.6rem] font-semibold leading-[1.08]">Meet clients who are already looking for you.</p>
                 <p className="mt-4 max-w-sm text-white/70">
-                  Set your own price, hours and languages. We handle bookings, payments and video calls.
+                  Set your own price, hours and languages, and keep 78% of every session fee. We handle bookings, payments and video calls.
                 </p>
               </>
             ) : (
