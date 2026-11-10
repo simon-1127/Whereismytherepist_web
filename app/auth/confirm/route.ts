@@ -59,7 +59,9 @@ export async function GET(request: Request) {
       return fail(
         isRecovery
           ? "That reset link has expired or was already used. Request a new one below."
-          : "That confirmation link has expired or was already used. Sign in, or sign up again to get a new link."
+          : type === "magiclink" || type === "invite"
+            ? "That sign-in link has expired or was already used. Sign in with the same email: use Continue with Google, or Forgot password to set a password."
+            : "That confirmation link has expired or was already used. Sign in, or sign up again to get a new link."
       );
     }
 

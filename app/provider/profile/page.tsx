@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "../../../lib/supabase/server";
 import ProviderProfileForm from "../../../components/provider/ProviderProfileForm";
+import ShareProfile from "../../../components/ShareProfile";
+import { SITE_URL } from "../../../lib/site";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your therapist profile" };
@@ -70,6 +72,17 @@ export default async function ProviderProfilePage() {
         <header className="mb-8">
           <h1 className="text-[2.4rem] font-bold md:text-5xl">{onboarding ? "Set up your profile" : "Your public profile"}</h1>
           <p className="mt-2 text-lg text-ink-2">This is what clients read before they book you.</p>
+          {existingProfile?.is_publicly_listed && (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <ShareProfile
+                variant="owner"
+                providerId={user.id}
+                name={existingProfile.full_name || "Therapist"}
+                url={`${SITE_URL}/therapists/${user.id}`}
+              />
+              <Link href={`/therapists/${user.id}`} className="link text-sm">View public page</Link>
+            </div>
+          )}
         </header>
         {onboarding && (
           <div className="mb-6 flex flex-col gap-4 rounded-[24px] bg-lilac p-5 ring-1 ring-line sm:flex-row sm:items-center sm:justify-between md:p-6">

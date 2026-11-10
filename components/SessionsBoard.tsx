@@ -4,6 +4,7 @@ import { fmtDayLong, fmtTimeRange } from "../lib/format";
 import { formatMoney } from "../lib/money";
 import { canJoinSession } from "../lib/daily";
 import { Avatar, EmptyState, SessionTicket, StatusPill } from "./ui";
+import MessageButton from "./messages/MessageButton";
 
 export type BoardSession = {
   id: string;
@@ -16,6 +17,8 @@ export type BoardSession = {
   provider_payout_amount?: number | null;
   personName: string;
   personPhoto?: string | null;
+  /** The other person's user id (for "Message"). */
+  personId?: string;
 };
 
 const TABS: { id: Bucket; label: string }[] = [
@@ -158,6 +161,17 @@ export default function SessionsBoard({
                 )}
                 <StatusPill display={next.display} />
               </div>
+              {next.personId && (
+                <div className="mt-4">
+                  <MessageButton
+                    otherUserId={next.personId}
+                    perspective={perspective}
+                    label={perspective === "client" ? "Message therapist" : "Message client"}
+                    className="btn btn-sm bg-white/15 text-white hover:bg-white/25"
+                    noteClassName="mt-2 text-sm text-white/75"
+                  />
+                </div>
+              )}
             </>
           ) : (
             <p className="mt-3 text-white/70">

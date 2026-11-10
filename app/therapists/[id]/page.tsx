@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { jsonLd, SITE_URL } from "../../../lib/site";
 import { notFound, redirect } from "next/navigation";
+import { createAdminClient } from "../../../lib/supabase/admin";
 import { createClient } from "../../../lib/supabase/server";
 import BookingWidget from "../../../components/BookingWidget";
+import ShareProfile from "../../../components/ShareProfile";
+import MessageButton from "../../../components/messages/MessageButton";
 import Footer from "../../../components/Footer";
 import { Avatar } from "../../../components/ui";
 import { formatMoney } from "../../../lib/money";
@@ -12,12 +15,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: t } = await supabase
-    .from("provider_profiles")
-    .select("full_name, professional_title, years_experience, base_session_rate, currency, bio")
-    .eq("user_id", id)
-    .maybeSingle();
+  const t = await loadListedProfile(id, "full_name, professional_title, years_experience, base_session_rate, currency, bio, photo_url");
   if (!t) return { title: "Therapist", robots: { index: false } };
   const name = t.full_name || "Therapist";
   const role = t.professional_title || "Therapist";
@@ -25,8 +23,40 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     title: `${name}, ${role}: Book Online Therapy`,
     description: `${name} is a ${role.toLowerCase()} with ${t.years_experience || 0} years of experience offering online therapy sessions in India from ${formatMoney(t.base_session_rate, t.currency || "INR")}. ${(t.bio || "").slice(0, 110)}`.trim(),
     alternates: { canonical: `/therapists/${id}` },
-    openGraph: { type: "profile", title: `${name}, ${role}`, url: `/therapists/${id}` },
+    openGraph: { type: "profile", title: `${name}, ${role}`, url: `/therapists/${id}`, ...(t.photo_url ? { images: [t.photo_url] } : {}) },
   };
+}
+
+const PROFILE_SELECT =
+  "user_id, full_name, professional_title, years_experience, base_session_rate, currency, bio, photo_url, video_intro_url, " +
+  "approach_statement, age_groups_served, education_credentials, license_no, kyc_status, rating_avg, rating_count, " +
+  "provider_languages ( languages ( id, name ) ), provider_specialties ( specialties ( id, name ) ), " +
+  "provider_approaches ( therapeutic_approaches ( id, name ) )";
+
+/**
+ * provider_profiles is readable only by SIGNED-IN users (RLS
+ * provider_profiles_select_public is TO authenticated), so a shared
+ * profile link opened while signed out (and every link-preview crawler)
+ * used to 404. Signed-out visitors get the same listed-only row through
+ * the service role, with an explicit list of the public columns this page
+ * shows, never `*`.
+ */
+async function loadListedProfile(id: string, columns: string): Promise<any | null> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  const supabase = await createClient();
+  const { data } = await supabase.from("provider_profiles").select(columns).eq("user_id", id).maybeSingle();
+  if (data) return data;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) return null; // signed in and RLS says no: not listed
+  const { data: pub } = await createAdminClient()
+    .from("provider_profiles")
+    .select(columns)
+    .eq("user_id", id)
+    .eq("is_publicly_listed", true)
+    .maybeSingle();
+  return pub ?? null;
 }
 
 const AGE_LABELS: Record<string, string> = { children: "children", teens: "teens", adults: "adults", all_ages: "all ages" };
@@ -53,13 +83,7 @@ export default async function TherapistProfile({
     if (userRow?.role === "provider") redirect("/provider/dashboard");
   }
 
-  const { data: t } = await supabase
-    .from("provider_profiles")
-    .select(
-      `*, provider_languages ( languages ( id, name ) ), provider_specialties ( specialties ( id, name ) ), provider_approaches ( therapeutic_approaches ( id, name ) )`
-    )
-    .eq("user_id", id)
-    .maybeSingle();
+  const t = await loadListedProfile(id, PROFILE_SELECT);
 
   if (!t) notFound();
 
@@ -138,6 +162,9 @@ export default async function TherapistProfile({
                 <div>
                   <h1 className="text-[2.6rem] font-bold md:text-6xl">{name}</h1>
                   <p className="mt-2 text-lg text-ink-2">{t.professional_title || "Therapist"}</p>
+                  <div className="mt-4">
+                    <ShareProfile providerId={t.user_id} name={name} url={`${SITE_URL}/therapists/${t.user_id}`} />
+                  </div>
                   <div className="mt-5 flex flex-wrap gap-2">
                     <span className="chip">
                       {t.rating_count ? `★ ${Number(t.rating_avg).toFixed(1)} (${t.rating_count} reviews)` : "New on the platform"}
@@ -231,6 +258,11 @@ export default async function TherapistProfile({
                     Sign in to book
                   </Link>
                 </div>
+              </div>
+            )}
+            {user && (
+              <div className="mt-4">
+                <MessageButton otherUserId={t.user_id} perspective="client" label={`Message ${first}`} noteClassName="mt-2 px-2 text-sm text-ink-3" />
               </div>
             )}
             <ul className="mt-4 space-y-2 px-2 text-sm text-ink-2">

@@ -33,6 +33,7 @@ export default async function ProviderSessionsPage({ searchParams }: { searchPar
   const board: BoardSession[] = (sessions || []).map((s) => ({
     ...s,
     personName: names.get(s.client_id) || "Client",
+    personId: s.client_id,
   }));
 
   const active: Bucket = view === "history" || view === "cancelled" ? view : "upcoming";

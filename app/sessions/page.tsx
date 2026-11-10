@@ -37,6 +37,7 @@ export default async function MySessionsPage({ searchParams }: { searchParams: P
     ...s,
     personName: byId.get(s.provider_id)?.full_name || "Your therapist",
     personPhoto: byId.get(s.provider_id)?.photo_url,
+    personId: s.provider_id,
   }));
 
   const active: Bucket = view === "history" || view === "cancelled" ? view : "upcoming";

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "../lib/supabase/client";
+import { MESSAGES_READ_EVENT } from "../lib/messages";
 
 type Role = "client" | "provider" | "gendoc" | null;
 type NavUser = { id: string; email: string | null; name?: string | null } | null;
@@ -98,16 +99,39 @@ export default function Navbar({
   // Only trust the server flag for the user it was computed for.
   const companyDoctor = initialCompanyDoctor && user?.id === initialUser?.id;
 
+  // Unread messages badge: re-read on navigation, tab focus and after a
+  // thread is marked read. Fails quietly (e.g. before migration 010).
+  const [unread, setUnread] = useState(0);
+  const canMessage = !!user && !isGenDoc && role !== null;
+  useEffect(() => {
+    if (!canMessage) return setUnread(0);
+    let live = true;
+    const load = () =>
+      supabase.rpc("fn_unread_message_count").then(({ data, error }) => {
+        if (live && !error) setUnread(typeof data === "number" ? data : 0);
+      });
+    load();
+    const onVisible = () => document.visibilityState === "visible" && load();
+    window.addEventListener(MESSAGES_READ_EVENT, load);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      live = false;
+      window.removeEventListener(MESSAGES_READ_EVENT, load);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [canMessage, supabase, pathname]);
+
   async function handleLogout() {
     setSigningOut(true);
     await supabase.auth.signOut();
     window.location.assign("/");
   }
 
-  const links: { href: string; label: string; exact?: boolean }[] = isProvider
+  const links: { href: string; label: string; exact?: boolean; badge?: number }[] = isProvider
     ? [
         { href: "/provider/dashboard", label: "Dashboard" },
         { href: "/provider/bookings", label: "Sessions" },
+        { href: "/provider/messages", label: "Messages", badge: unread },
         { href: "/provider/availability", label: "Availability" },
       ]
     : isGenDoc
@@ -119,7 +143,7 @@ export default function Navbar({
         ]
       : [
           { href: "/therapists", label: "Find a therapist" },
-          ...(user ? [{ href: "/sessions", label: "My sessions" }] : []),
+          ...(user ? [{ href: "/sessions", label: "My sessions" }, { href: "/messages", label: "Messages", badge: unread }] : []),
           ...(user && companyDoctor ? [{ href: "/company-doctor", label: "Company doctor" }] : []),
           { href: "/about", label: "About" },
           { href: "/contact", label: "Contact" },
@@ -217,6 +241,11 @@ export default function Navbar({
                   }`}
                 >
                   {l.label}
+                  {"badge" in l && l.badge ? (
+                    <span className="ml-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-rose px-1 text-[11px] font-bold leading-none text-white" aria-label={`${l.badge} unread`}>
+                      {l.badge > 99 ? "99+" : l.badge}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}
@@ -330,6 +359,11 @@ export default function Navbar({
                   }`}
                 >
                   {l.label}
+                  {"badge" in l && l.badge ? (
+                    <span className="ml-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-rose px-1 text-[11px] font-bold leading-none text-white" aria-label={`${l.badge} unread`}>
+                      {l.badge > 99 ? "99+" : l.badge}
+                    </span>
+                  ) : null}
                 </Link>
               ))}
             </div>

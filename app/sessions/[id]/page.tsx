@@ -8,6 +8,7 @@ import { canJoinSession, joinWindow } from "../../../lib/daily";
 import { Avatar, StatusPill } from "../../../components/ui";
 import PaymentWatcher from "../../../components/PaymentWatcher";
 import Footer from "../../../components/Footer";
+import MessageButton from "../../../components/messages/MessageButton";
 
 export const dynamic = "force-dynamic";
 
@@ -157,6 +158,14 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
               <Link href={`/therapists/${other.id}`} className="btn btn-quiet w-full">
                 Book another session with {other.name.split(" ")[0]}
               </Link>
+            )}
+
+            {session.status !== "pending_payment" && (
+              <MessageButton
+                otherUserId={isClient ? session.provider_id : session.client_id}
+                perspective={isClient ? "client" : "provider"}
+                label={isClient ? `Message ${other.name.split(" ")[0]}` : "Message client"}
+              />
             )}
           </div>
         </section>
