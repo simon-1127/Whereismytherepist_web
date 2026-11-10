@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "../lib/supabase/client";
 
-type Role = "client" | "provider" | null;
+type Role = "client" | "provider" | "gendoc" | null;
 type NavUser = { id: string; email: string | null; name?: string | null } | null;
 
 const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
@@ -13,9 +13,12 @@ const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : use
 export default function Navbar({
   initialUser = null,
   initialRole = null,
+  initialCompanyDoctor = false,
 }: {
   initialUser?: NavUser;
   initialRole?: Role;
+  /** HR-onboarded client: show the "Company doctor" link. */
+  initialCompanyDoctor?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<NavUser>(initialUser);
@@ -91,6 +94,9 @@ export default function Navbar({
   }, [menuOpen]);
 
   const isProvider = role === "provider";
+  const isGenDoc = role === "gendoc";
+  // Only trust the server flag for the user it was computed for.
+  const companyDoctor = initialCompanyDoctor && user?.id === initialUser?.id;
 
   async function handleLogout() {
     setSigningOut(true);
@@ -98,22 +104,31 @@ export default function Navbar({
     window.location.assign("/");
   }
 
-  const links = isProvider
+  const links: { href: string; label: string; exact?: boolean }[] = isProvider
     ? [
         { href: "/provider/dashboard", label: "Dashboard" },
         { href: "/provider/bookings", label: "Sessions" },
         { href: "/provider/availability", label: "Availability" },
       ]
-    : [
-        { href: "/therapists", label: "Find a therapist" },
-        ...(user ? [{ href: "/sessions", label: "My sessions" }] : []),
-        { href: "/about", label: "About" },
-        { href: "/contact", label: "Contact" },
-      ];
+    : isGenDoc
+      ? [
+          // Exact: every portal page lives under /gendoc/.
+          { href: "/gendoc", label: "Today's queue", exact: true },
+          { href: "/gendoc/hours", label: "Hours" },
+          { href: "/gendoc/profile", label: "Profile" },
+        ]
+      : [
+          { href: "/therapists", label: "Find a therapist" },
+          ...(user ? [{ href: "/sessions", label: "My sessions" }] : []),
+          ...(user && companyDoctor ? [{ href: "/company-doctor", label: "Company doctor" }] : []),
+          { href: "/about", label: "About" },
+          { href: "/contact", label: "Contact" },
+        ];
 
-  const homeHref = isProvider ? "/provider/dashboard" : "/";
-  const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
-  const accountHref = isProvider ? "/provider/profile" : "/profile";
+  const homeHref = isProvider ? "/provider/dashboard" : isGenDoc ? "/gendoc" : "/";
+  const exactHrefs = new Set(links.filter((l) => l.exact).map((l) => l.href));
+  const isActive = (href: string) => pathname === href || (!exactHrefs.has(href) && !!pathname?.startsWith(`${href}/`));
+  const accountHref = isProvider ? "/provider/profile" : isGenDoc ? "/gendoc/profile" : "/profile";
   const displayName = user?.name || user?.email || "";
   const letter = (displayName.trim()[0] || "?").toUpperCase();
 
@@ -180,9 +195,9 @@ export default function Navbar({
               </span>
             </span>
           </Link>
-          {isProvider && (
+          {(isProvider || isGenDoc) && (
             <span className="hidden rounded-full bg-lilac px-2.5 py-1 text-xs font-semibold text-brand-violet lg:inline">
-              Therapist account
+              {isGenDoc ? "Doctor account" : "Therapist account"}
             </span>
           )}
 
@@ -295,13 +310,17 @@ export default function Navbar({
                   <p className="truncate font-semibold">{user.name || "Your account"}</p>
                   <p className="truncate text-sm text-ink-3">
                     {user.email}
-                    {isProvider ? " (therapist)" : ""}
+                    {isProvider ? " (therapist)" : isGenDoc ? " (doctor)" : ""}
                   </p>
                 </div>
               </div>
             )}
             <div className="flex flex-col">
-              {[{ href: homeHref, label: "Home" }, ...links, ...(user ? [{ href: accountHref, label: "Profile" }] : [])].map((l, i) => (
+              {[
+                ...(isGenDoc ? [] : [{ href: homeHref, label: "Home" }]),
+                ...links,
+                ...(user && !isGenDoc ? [{ href: accountHref, label: "Profile" }] : []),
+              ].map((l, i) => (
                 <Link
                   key={l.href + l.label}
                   href={l.href}

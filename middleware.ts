@@ -15,7 +15,7 @@ import { safeNext } from "./lib/safe-next";
  * Also does the signed-in check for private pages up front, so they
  * redirect before rendering instead of flashing a "please sign in" state.
  */
-const PRIVATE_PREFIXES = ["/sessions", "/profile", "/provider", "/welcome"];
+const PRIVATE_PREFIXES = ["/sessions", "/profile", "/provider", "/welcome", "/gendoc", "/company-doctor"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

@@ -5,6 +5,7 @@ import { createClient } from "../../lib/supabase/server";
 import FilterSidebar from "../../components/FilterSidebar";
 import SortDropdown from "../../components/SortDropdown";
 import Footer from "../../components/Footer";
+import CompanyDoctorCard from "../../components/gendoc/CompanyDoctorCard";
 import { Avatar, EmptyState } from "../../components/ui";
 import { Contours } from "../../components/PageHeader";
 import { formatMoney, rupeesToPaise } from "../../lib/money";
@@ -31,6 +32,7 @@ export default async function FindTherapist({ searchParams }: { searchParams: Pr
   if (user) {
     const { data: userRow } = await supabase.from("users").select("role").eq("id", user.id).single();
     if (userRow?.role === "provider") redirect("/provider/dashboard");
+    if (userRow?.role === "gendoc") redirect("/gendoc");
   }
 
   if (!user) {
@@ -124,6 +126,12 @@ export default async function FindTherapist({ searchParams }: { searchParams: Pr
             <SortDropdown />
           </Suspense>
         </header>
+
+        {!reschedule && (
+          <Suspense fallback={null}>
+            <CompanyDoctorCard />
+          </Suspense>
+        )}
 
         <div className="grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start">
           <aside className="lg:sticky lg:top-28">

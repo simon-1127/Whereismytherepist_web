@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "../../lib/supabase/server";
 import SessionsBoard, { type BoardSession } from "../../components/SessionsBoard";
 import Footer from "../../components/Footer";
+import CompanyDoctorCard from "../../components/gendoc/CompanyDoctorCard";
 import type { Bucket } from "../../lib/sessions";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +48,9 @@ export default async function MySessionsPage({ searchParams }: { searchParams: P
           <h1 className="text-[2.4rem] font-bold md:text-5xl">My sessions</h1>
           <p className="mt-2 text-lg text-ink-2">Your bookings and every session you&rsquo;ve had, in one place.</p>
         </header>
+        <Suspense fallback={null}>
+          <CompanyDoctorCard />
+        </Suspense>
         <SessionsBoard sessions={board} view={active} basePath="/sessions" perspective="client" />
       </main>
       <Footer />

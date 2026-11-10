@@ -131,7 +131,11 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
 
             {rebook && isClient && (
               <div className="rounded-[var(--radius-inner)] border border-amber/30 bg-amber-soft p-5">
-                <p className="font-semibold text-ink">{MISSED_WHY[session.status] || "This session didn't go ahead."}</p>
+                <p className="font-semibold text-ink">
+                  {session.status === "interrupted" && session.cancelled_at
+                    ? "Our team cancelled this session. We've sent you a message with the details."
+                    : MISSED_WHY[session.status] || "This session didn't go ahead."}
+                </p>
                 <p className="mt-1 text-ink-2">
                   Your payment is safe. Pick a new time for free, or choose a different therapist — what you paid carries over.
                 </p>

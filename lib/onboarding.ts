@@ -1,6 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createAdminClient } from "./supabase/admin";
 import { safeNext } from "./safe-next";
+import { needsProfileSetup } from "./gendoc";
 
 /**
  * Therapist self-signup. A new account becomes a provider only when it asked
@@ -40,6 +41,20 @@ export async function postAuthPath(supabase: SupabaseClient, user: User, next: s
       .maybeSingle();
     if (!p || p.application_status === "draft") return "/provider/profile?welcome=1";
     return safeNext(next, "/provider/dashboard");
+  }
+
+  // Company doctors: rows are created by the HR dashboard (no INSERT policy),
+  // so a missing row can't be fixed from here — say so instead of a form.
+  if (row?.role === "gendoc") {
+    const { data: g } = await supabase
+      .from("gendoc_profiles")
+      .select("application_status, profile_completed_by_gendoc")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!g) return "/gendoc/not-set-up";
+    if (needsProfileSetup(g)) return "/gendoc/profile?welcome=1";
+    const target = safeNext(next, "/gendoc");
+    return target.startsWith("/gendoc") ? target : "/gendoc";
   }
 
   const { data: profile } = await supabase

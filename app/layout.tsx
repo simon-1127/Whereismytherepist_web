@@ -6,7 +6,8 @@ import Script from "next/script";
 import Navbar from "../components/Navbar";
 import CookieConsent from "../components/CookieConsent";
 import ScrollReveal from "../components/ScrollReveal";
-import { createClient } from "../lib/supabase/server";
+import { getViewer } from "../lib/viewer";
+import { HR_TIER } from "../lib/gendoc";
 import { consentBootstrapScript } from "../lib/consent";
 import {
   DEFAULT_DESCRIPTION,
@@ -57,24 +58,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: "#522cad" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  let role: "client" | "provider" | null = null;
-  let name: string | null = null;
-  if (user) {
-    const { data: userRow } = await supabase.from("users").select("role").eq("id", user.id).single();
-    role = (userRow?.role as "client" | "provider") || null;
-    // For the round profile icon's letter.
-    const { data: prof } = await supabase
-      .from(role === "provider" ? "provider_profiles" : "client_profiles")
-      .select("full_name")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    name = prof?.full_name || null;
-  }
+  // Memoised per request: section layouts that guard by role reuse it.
+  const { user, role, name, tier } = await getViewer();
 
   return (
     <html lang="en-IN" suppressHydrationWarning>
@@ -88,7 +73,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {consentBootstrapScript(GOOGLE_TAG_ID)}
         </Script>
         <Script src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_TAG_ID}`} strategy="afterInteractive" />
-        <Navbar initialUser={user ? { id: user.id, email: user.email ?? null, name } : null} initialRole={role} />
+        <Navbar
+          initialUser={user ? { id: user.id, email: user.email, name } : null}
+          initialRole={role}
+          initialCompanyDoctor={tier === HR_TIER}
+        />
         <div className="flex min-h-[calc(100vh-75px)] flex-col">{children}</div>
         <CookieConsent />
         <ScrollReveal />
